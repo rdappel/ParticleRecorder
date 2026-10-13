@@ -99,9 +99,19 @@ KatanaEngine blends with premultiplied alpha, so soft-edged textures don't get d
 
 Requirements: Visual Studio 2026 (C++ desktop and .NET desktop workloads, v145 toolset) and the .NET 10 SDK. x64 only.
 
+The engine is a git submodule, so clone with `--recurse-submodules`:
+
 ```powershell
-git clone --recurse-submodules <repo-url> ParticleRecorder   # or: git submodule update --init
+git clone --recurse-submodules https://github.com/rdappel/ParticleRecorder.git
 ```
+
+**Already cloned without it?** A plain `git clone` (or some IDE clone dialogs) leaves the `KatanaEngine/` folder empty. Visual Studio then reports the KatanaEngine projects as not found, and the build stops with *"The KatanaEngine submodule is missing"*. Fix it from the `ParticleRecorder` folder, then reload the solution:
+
+```powershell
+git submodule update --init
+```
+
+Optionally, run `git config --global submodule.recurse true` once so `git pull` and `git checkout` keep the submodule in sync automatically. Otherwise, after pulling a commit that moves the engine pointer, run `git submodule update` again.
 
 Open `ParticleRecorder.slnx` and build `x64` (Debug or Release). The first build restores Allegro through NuGet (pinned in `KatanaEngine/packages.config`). The C# project builds the native DLL first and copies it, along with the Allegro DLLs, next to `ParticleRecorder.exe`. Run the `ParticleRecorder` project.
 

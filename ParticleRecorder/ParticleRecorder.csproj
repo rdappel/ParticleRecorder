@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk" InitialTargets="KatanaCheckSubmodule">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -22,6 +22,11 @@
                       SkipGetTargetFrameworkProperties="true"
                       Private="false" />
   </ItemGroup>
+
+  <!-- A plain "git clone" leaves the KatanaEngine submodule empty; fail with one clear message. -->
+  <Target Name="KatanaCheckSubmodule">
+    <Error Condition="!Exists('$(MSBuildThisFileDirectory)..\KatanaEngine\KatanaEngine.props')" Text="The KatanaEngine submodule is missing (the KatanaEngine folder is empty). Run 'git submodule update --init' in the ParticleRecorder folder, then reload the solution." />
+  </Target>
 
   <!-- Copy the native game DLL and its Allegro DLLs next to the exe (after they exist). -->
   <Target Name="CopyNativeGame" AfterTargets="Build">

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project DefaultTargets="Build" InitialTargets="KatanaCheckSubmodule" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
@@ -45,7 +45,7 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
-    <Import Project="..\KatanaEngine\KatanaEngine.props" />
+    <Import Project="..\KatanaEngine\KatanaEngine.props" Condition="Exists('..\KatanaEngine\KatanaEngine.props')" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
@@ -114,6 +114,10 @@
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
-    <Import Project="..\KatanaEngine\KatanaEngine.targets" />
+    <Import Project="..\KatanaEngine\KatanaEngine.targets" Condition="Exists('..\KatanaEngine\KatanaEngine.targets')" />
   </ImportGroup>
+  <!-- A plain "git clone" leaves the KatanaEngine submodule empty; fail with one clear message instead of import errors. -->
+  <Target Name="KatanaCheckSubmodule">
+    <Error Condition="!Exists('..\KatanaEngine\KatanaEngine.props')" Text="The KatanaEngine submodule is missing (the KatanaEngine folder is empty). Run 'git submodule update --init' in the ParticleRecorder folder, then reload the solution." />
+  </Target>
 </Project>
