@@ -1,0 +1,86 @@
+using System.ComponentModel;
+using System.Globalization;
+using DrawingColor = System.Drawing.Color;
+
+namespace ParticleRecorder.Effects;
+
+/// <summary>
+/// The effect being edited. C# owns this data; the native preview receives every change
+/// as a "set &lt;Name&gt; &lt;value&gt;" message. Must stay in sync with
+/// ParticleRecorder.Native/Source/Particles/ParticleSettings.h.
+/// </summary>
+public sealed class ParticleSettings
+{
+    [Category("Emission"), Description("Maximum number of live particles.")]
+    public int MaxParticles { get; set; } = 500;
+
+    [Category("Emission"), Description("Particles emitted per second.")]
+    public float EmissionRate { get; set; } = 60f;
+
+    [Category("Lifetime"), Description("Shortest particle lifetime, in seconds.")]
+    public float LifetimeMin { get; set; } = 0.6f;
+
+    [Category("Lifetime"), Description("Longest particle lifetime, in seconds.")]
+    public float LifetimeMax { get; set; } = 1.4f;
+
+    [Category("Motion"), Description("Slowest initial speed, in pixels per second.")]
+    public float SpeedMin { get; set; } = 60f;
+
+    [Category("Motion"), Description("Fastest initial speed, in pixels per second.")]
+    public float SpeedMax { get; set; } = 160f;
+
+    [Category("Motion"), Description("Emission direction in degrees (0 = right, -90 = up).")]
+    public float Direction { get; set; } = -90f;
+
+    [Category("Motion"), Description("Random spread either side of Direction, in degrees.")]
+    public float Spread { get; set; } = 40f;
+
+    [Category("Motion"), Description("Downward acceleration, in pixels per second squared.")]
+    public float Gravity { get; set; } = 120f;
+
+    [Category("Appearance"), Description("Radius when a particle is born, in pixels.")]
+    public float StartSize { get; set; } = 6f;
+
+    [Category("Appearance"), Description("Radius when a particle dies, in pixels.")]
+    public float EndSize { get; set; } = 1f;
+
+    [Category("Appearance"), Description("Color when a particle is born.")]
+    public DrawingColor StartColor { get; set; } = DrawingColor.FromArgb(255, 191, 51);
+
+    [Category("Appearance"), Description("Opacity when a particle is born (0-255).")]
+    public int StartAlpha { get; set; } = 255;
+
+    [Category("Appearance"), Description("Color when a particle dies.")]
+    public DrawingColor EndColor { get; set; } = DrawingColor.FromArgb(230, 26, 13);
+
+    [Category("Appearance"), Description("Opacity when a particle dies (0-255).")]
+    public int EndAlpha { get; set; } = 0;
+
+    /// <summary>Every setting as a "set" message, e.g. to initialise the native preview.</summary>
+    public IEnumerable<string> ToMessages() =>
+        TypeDescriptor.GetProperties(this)
+            .Cast<PropertyDescriptor>()
+            .Select(property => ToMessage(property.Name))
+            .OfType<string>()
+            .Distinct();
+
+    /// <summary>The "set" message for a changed property, or null if it has no native counterpart.</summary>
+    public string? ToMessage(string propertyName) => propertyName switch
+    {
+        nameof(StartColor) or nameof(StartAlpha) => $"set StartColor {FormatColor(StartColor, StartAlpha)}",
+        nameof(EndColor) or nameof(EndAlpha) => $"set EndColor {FormatColor(EndColor, EndAlpha)}",
+        nameof(MaxParticles) => $"set MaxParticles {MaxParticles}",
+        _ => FormatFloatSetting(propertyName),
+    };
+
+    private string? FormatFloatSetting(string propertyName)
+    {
+        var property = GetType().GetProperty(propertyName);
+        return property?.GetValue(this) is float value
+            ? $"set {propertyName} {value.ToString(CultureInfo.InvariantCulture)}"
+            : null;
+    }
+
+    private static string FormatColor(DrawingColor color, int alpha) =>
+        $"{color.R},{color.G},{color.B},{Math.Clamp(alpha, 0, 255)}";
+}

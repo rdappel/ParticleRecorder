@@ -1,0 +1,13 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+  </Configurations>
+  <Project Path="ParticleRecorder/ParticleRecorder.csproj" />
+  <Project Path="ParticleRecorder.Native/ParticleRecorder.Native.vcxproj" Id="492f3639-6ca5-456e-b971-382a7f1d3901" />
+  <Folder Name="/KatanaEngine/">
+    <Project Path="KatanaEngine/KatanaEngine.vcxproj" Id="467fb328-bb2b-4bcc-945e-41b96754a22d" />
+    <Project Path="KatanaEngine/WinForms/KatanaEngine.WinForms.csproj">
+      <Platform Solution="*|x64" Project="Any CPU" />
+    </Project>
+  </Folder>
+</Solution>

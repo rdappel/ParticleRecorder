@@ -1,0 +1,3 @@
+[submodule "KatanaEngine"]
+	path = KatanaEngine
+	url = https://github.com/rdappel/KatanaEngine.git
