@@ -1,83 +1,44 @@
-using KatanaEngine.WinForms;
 using ParticleRecorder.Effects;
 
 namespace ParticleRecorder;
 
-public sealed class MainForm : Form
+public sealed partial class MainForm : Form
 {
-    private const string NativeGameLibrary = "ParticleRecorder.Native.dll";
-    private const int PropertyPanelWidth = 340;
-
     private readonly ParticleSettings _settings = new();
-    private readonly PropertyGrid _propertyGrid;
-    private readonly KatanaViewport _viewport;
-    private readonly ToolStripStatusLabel _statusLabel;
-    private readonly ToolStripStatusLabel _particleCountLabel;
 
     public MainForm()
     {
-        Text = "Particle Recorder";
-        ClientSize = new Size(1400, 850);
-        StartPosition = FormStartPosition.CenterScreen;
+        InitializeComponent();
 
-        _propertyGrid = new PropertyGrid
-        {
-            Dock = DockStyle.Left,
-            Width = PropertyPanelWidth,
-            SelectedObject = _settings,
-            ToolbarVisible = false,
-        };
-        _propertyGrid.PropertyValueChanged += (_, e) => SendSetting(e.ChangedItem?.PropertyDescriptor?.Name);
-
-        _viewport = new KatanaViewport { Dock = DockStyle.Fill };
-        _viewport.MessageReceived += (_, message) => HandleGameMessage(message);
-
-        var splitter = new Splitter { Dock = DockStyle.Left };
-
-        var restartButton = new ToolStripButton("Restart Effect");
-        restartButton.Click += (_, _) => _viewport.Post("restart");
-        var loadTextureButton = new ToolStripButton("Load Texture...");
-        loadTextureButton.Click += (_, _) => ChooseTexture();
-        var clearTextureButton = new ToolStripButton("Clear Texture");
-        clearTextureButton.Click += (_, _) => SetTexture(string.Empty);
-        var toolStrip = new ToolStrip(restartButton, new ToolStripSeparator(), loadTextureButton, clearTextureButton)
-        {
-            GripStyle = ToolStripGripStyle.Hidden,
-        };
-
-        _statusLabel = new ToolStripStatusLabel("Starting preview...") { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
-        _particleCountLabel = new ToolStripStatusLabel("Particles: 0");
-        var statusStrip = new StatusStrip();
-        statusStrip.Items.AddRange([_statusLabel, _particleCountLabel]);
-
-        // Docking is applied in reverse order of addition: fill first, then the left-docked pair.
-        Controls.Add(_viewport);
-        Controls.Add(splitter);
-        Controls.Add(_propertyGrid);
-        Controls.Add(toolStrip);
-        Controls.Add(statusStrip);
-
-        _viewport.GameLibraryPath = NativeGameLibrary;
+        // Runtime data the designer can't hold: the settings object and the shared image filter.
+        propertyGrid.SelectedObject = _settings;
+        openTextureDialog.Filter = ImageFileNameEditor.ImageFilter;
     }
+
+    private void propertyGrid_PropertyValueChanged(object? sender, PropertyValueChangedEventArgs e) =>
+        SendSetting(e.ChangedItem?.PropertyDescriptor?.Name);
+
+    private void viewport_MessageReceived(object? sender, string message) => HandleGameMessage(message);
+
+    private void restartButton_Click(object? sender, EventArgs e) => viewport.Post("restart");
+
+    private void loadTextureButton_Click(object? sender, EventArgs e) => ChooseTexture();
+
+    private void clearTextureButton_Click(object? sender, EventArgs e) => SetTexture(string.Empty);
 
     private void ChooseTexture()
     {
-        using var dialog = new OpenFileDialog
-        {
-            Title = "Choose Particle Texture",
-            Filter = ImageFileNameEditor.ImageFilter,
-        };
         if (!string.IsNullOrEmpty(_settings.Texture))
-            dialog.InitialDirectory = Path.GetDirectoryName(_settings.Texture);
+            openTextureDialog.InitialDirectory = Path.GetDirectoryName(_settings.Texture);
 
-        if (dialog.ShowDialog(this) == DialogResult.OK) SetTexture(dialog.FileName);
+        if (openTextureDialog.ShowDialog(this) == DialogResult.OK) SetTexture(openTextureDialog.FileName);
     }
 
     private void SetTexture(string path)
     {
         _settings.Texture = path;
-        _propertyGrid.Refresh();
-        _statusLabel.Text = string.IsNullOrEmpty(path) ? "Drawing circles" : $"Texture: {Path.GetFileName(path)}";
+        propertyGrid.Refresh();
+        statusLabel.Text = string.IsNullOrEmpty(path) ? "Drawing circles" : $"Texture: {Path.GetFileName(path)}";
         SendSetting(nameof(ParticleSettings.Texture));
     }
 
@@ -86,7 +47,7 @@ public sealed class MainForm : Form
         if (propertyName == null) return;
 
         var message = _settings.ToMessage(propertyName);
-        if (message != null) _viewport.Post(message);
+        if (message != null) viewport.Post(message);
     }
 
     private void HandleGameMessage(string message)
@@ -98,14 +59,14 @@ public sealed class MainForm : Form
         switch (name)
         {
             case "ready":
-                foreach (var setting in _settings.ToMessages()) _viewport.Post(setting);
-                _statusLabel.Text = "Preview running";
+                foreach (var setting in _settings.ToMessages()) viewport.Post(setting);
+                statusLabel.Text = "Preview running";
                 break;
             case "stats":
-                _particleCountLabel.Text = $"Particles: {argument}";
+                particleCountLabel.Text = $"Particles: {argument}";
                 break;
             case "error":
-                _statusLabel.Text = argument;
+                statusLabel.Text = argument;
                 break;
         }
     }
