@@ -1,8 +1,19 @@
 using System.ComponentModel;
+using System.Drawing.Design;
 using System.Globalization;
 using DrawingColor = System.Drawing.Color;
 
 namespace ParticleRecorder.Effects;
+
+/// <summary>How particles combine with what is behind them.</summary>
+public enum ParticleBlend
+{
+    /// <summary>Normal transparency: particles cover what is behind them.</summary>
+    Alpha,
+
+    /// <summary>Particles add light: overlapping particles get brighter (fire, sparks, glow).</summary>
+    Additive,
+}
 
 /// <summary>
 /// The effect being edited. C# owns this data; the native preview receives every change
@@ -38,19 +49,38 @@ public sealed class ParticleSettings
     [Category("Motion"), Description("Downward acceleration, in pixels per second squared.")]
     public float Gravity { get; set; } = 120f;
 
-    [Category("Appearance"), Description("Radius when a particle is born, in pixels.")]
-    public float StartSize { get; set; } = 6f;
+    [Category("Rotation"), Description("Smallest initial rotation, in degrees.")]
+    public float RotationMin { get; set; }
 
-    [Category("Appearance"), Description("Radius when a particle dies, in pixels.")]
-    public float EndSize { get; set; } = 1f;
+    [Category("Rotation"), Description("Largest initial rotation, in degrees.")]
+    public float RotationMax { get; set; }
 
-    [Category("Appearance"), Description("Color when a particle is born.")]
+    [Category("Rotation"), Description("Slowest spin, in degrees per second (negative = counter-clockwise).")]
+    public float SpinMin { get; set; }
+
+    [Category("Rotation"), Description("Fastest spin, in degrees per second.")]
+    public float SpinMax { get; set; }
+
+    [Category("Appearance"), Description("Image drawn for each particle. Leave empty to draw circles.")]
+    [Editor(typeof(ImageFileNameEditor), typeof(UITypeEditor))]
+    public string Texture { get; set; } = string.Empty;
+
+    [Category("Appearance"), Description("Alpha: normal transparency. Additive: particles add light (fire, sparks, glow).")]
+    public ParticleBlend Blend { get; set; } = ParticleBlend.Alpha;
+
+    [Category("Appearance"), Description("Size when a particle is born, in pixels (for textures: the longer side).")]
+    public float StartSize { get; set; } = 12f;
+
+    [Category("Appearance"), Description("Size when a particle dies, in pixels.")]
+    public float EndSize { get; set; } = 2f;
+
+    [Category("Appearance"), Description("Color when a particle is born (multiplies the texture).")]
     public DrawingColor StartColor { get; set; } = DrawingColor.FromArgb(255, 191, 51);
 
     [Category("Appearance"), Description("Opacity when a particle is born (0-255).")]
     public int StartAlpha { get; set; } = 255;
 
-    [Category("Appearance"), Description("Color when a particle dies.")]
+    [Category("Appearance"), Description("Color when a particle dies (multiplies the texture).")]
     public DrawingColor EndColor { get; set; } = DrawingColor.FromArgb(230, 26, 13);
 
     [Category("Appearance"), Description("Opacity when a particle dies (0-255).")]
@@ -70,6 +100,8 @@ public sealed class ParticleSettings
         nameof(StartColor) or nameof(StartAlpha) => $"set StartColor {FormatColor(StartColor, StartAlpha)}",
         nameof(EndColor) or nameof(EndAlpha) => $"set EndColor {FormatColor(EndColor, EndAlpha)}",
         nameof(MaxParticles) => $"set MaxParticles {MaxParticles}",
+        nameof(Texture) => $"set Texture {Texture}",
+        nameof(Blend) => $"set Blend {Blend}",
         _ => FormatFloatSetting(propertyName),
     };
 

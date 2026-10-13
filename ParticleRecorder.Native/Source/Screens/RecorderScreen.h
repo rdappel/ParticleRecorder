@@ -14,8 +14,8 @@ public:
 	RecorderScreen();
 	~RecorderScreen() override = default;
 
-	// Returns false if the setting name or value was not recognised.
-	bool ApplySetting(const std::string& name, const std::string& value);
+	// On failure returns false and describes the problem in error.
+	bool ApplySetting(const std::string& name, const std::string& value, std::string& error);
 	void Restart();
 
 	int GetActiveParticleCount() const { return m_effect.GetActiveParticleCount(); }
@@ -24,6 +24,8 @@ public:
 	void Draw(SpriteBatch& spriteBatch) override;
 
 private:
+
+	bool LoadTexture(const std::string& path, std::string& error);
 
 	ParticleSettings m_settings;	// declared before m_effect, which keeps a reference to it
 	PreviewEffect m_effect;

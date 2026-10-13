@@ -54,7 +54,8 @@ void ParticleRecorderGame::OnHostMessage(const std::string& message)
 		const std::string name = message.substr(setPrefix.size(), nameEnd - setPrefix.size());
 		const std::string value = nameEnd == std::string::npos ? std::string() : message.substr(nameEnd + 1);
 
-		if (!m_recorderScreen->ApplySetting(name, value)) SendHostMessage("error invalid setting: " + message);
+		std::string error;
+		if (!m_recorderScreen->ApplySetting(name, value, error)) SendHostMessage("error " + error);
 		return;
 	}
 

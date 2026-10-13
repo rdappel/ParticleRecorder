@@ -21,6 +21,9 @@ public:
 	// Call after changing MaxParticles or EmissionRate (restarts the effect).
 	void Rebuild();
 
+	// nullptr draws circles. Keeps the live particles.
+	void SetTexture(std::shared_ptr<Texture> texture);
+
 	void SetPosition(const Vector2& position);
 	void Update(const GameTime& gameTime);
 	void Draw(SpriteBatch& spriteBatch);
@@ -29,8 +32,11 @@ public:
 
 private:
 
+	std::shared_ptr<IParticleDrawer> CreateDrawer() const;
+
 	const ParticleSettings& m_settings;
 	std::shared_ptr<std::mt19937> m_random;
+	std::shared_ptr<Texture> m_texture;
 	std::unique_ptr<ParticleEmitter<SimpleParticle>> m_emitter;
 	Vector2 m_position;
 };

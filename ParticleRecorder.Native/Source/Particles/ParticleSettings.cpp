@@ -60,6 +60,20 @@ bool ApplySetting(ParticleSettings& settings, const std::string& name, const std
 	if (name == "StartColor") return TryParseColor(value, settings.StartColor);
 	if (name == "EndColor") return TryParseColor(value, settings.EndColor);
 
+	if (name == "Texture")
+	{
+		settings.Texture = value;
+		return true;
+	}
+
+	if (name == "Blend")
+	{
+		if (value == "Alpha") settings.Blend = BlendState::ALPHA_BLEND;
+		else if (value == "Additive") settings.Blend = BlendState::ADDITIVE;
+		else return false;
+		return true;
+	}
+
 	struct FloatSetting { const char* Name; float ParticleSettings::* Field; };
 	static const FloatSetting floatSettings[] =
 	{
@@ -71,6 +85,10 @@ bool ApplySetting(ParticleSettings& settings, const std::string& name, const std
 		{ "Direction", &ParticleSettings::Direction },
 		{ "Spread", &ParticleSettings::Spread },
 		{ "Gravity", &ParticleSettings::Gravity },
+		{ "RotationMin", &ParticleSettings::RotationMin },
+		{ "RotationMax", &ParticleSettings::RotationMax },
+		{ "SpinMin", &ParticleSettings::SpinMin },
+		{ "SpinMax", &ParticleSettings::SpinMax },
 		{ "StartSize", &ParticleSettings::StartSize },
 		{ "EndSize", &ParticleSettings::EndSize },
 	};

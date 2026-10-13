@@ -1,8 +1,8 @@
 #include "pch.h"
 #include "PreviewEffect.h"
 
-#include "Core/Math/Circle.h"
 #include "Particles/ParticleBehaviors.h"
+#include "Particles/SimpleParticleDrawers.h"
 
 namespace
 {
@@ -22,6 +22,7 @@ namespace
 	float RandomBetween(std::mt19937& random, float min, float max)
 	{
 		if (max < min) std::swap(min, max);
+		if (max == min) return min;
 		return std::uniform_real_distribution<float>(min, max)(random);
 	}
 
@@ -44,6 +45,8 @@ namespace
 			particle.Lifetime = std::max(0.01f, RandomBetween(random, m_settings.LifetimeMin, m_settings.LifetimeMax));
 			particle.Color = m_settings.StartColor;
 			particle.Scale = m_settings.StartSize;
+			particle.Rotation = RandomBetween(random, m_settings.RotationMin, m_settings.RotationMax) * DegreesToRadians;
+			particle.AngularVelocity = RandomBetween(random, m_settings.SpinMin, m_settings.SpinMax) * DegreesToRadians;
 			particle.IsAlive = true;
 		}
 
@@ -71,6 +74,7 @@ namespace
 
 			particle.Velocity.Y += m_settings.Gravity * deltaTime;
 			particle.Position += particle.Velocity * deltaTime;
+			particle.Rotation += particle.AngularVelocity * deltaTime;
 
 			const float amount = particle.GetNormalizedAge();
 			particle.Color = Lerp(m_settings.StartColor, m_settings.EndColor, amount);
@@ -79,21 +83,6 @@ namespace
 
 	private:
 		const ParticleSettings& m_settings;
-	};
-
-	class CircleDrawer : public ParticleDrawer<SimpleParticle>
-	{
-	protected:
-		void DrawParticle(const SimpleParticle& particle, SpriteBatch& spriteBatch) override
-		{
-			if (particle.Scale <= 0.0f || particle.Color.Alpha <= 0.0f) return;
-
-			// Allegro blends with premultiplied alpha.
-			const Color& color = particle.Color;
-			const Color premultiplied(color.Red * color.Alpha, color.Green * color.Alpha, color.Blue * color.Alpha, color.Alpha);
-
-			spriteBatch.DrawPrimitive(Circle(particle.Position, particle.Scale), premultiplied, premultiplied, 0.0f);
-		}
 	};
 }
 
@@ -110,12 +99,25 @@ void PreviewEffect::Rebuild()
 	config.MaxParticles = m_settings.MaxParticles;
 	config.EmissionRate = m_settings.EmissionRate;
 	config.IsLooping = true;
+	config.Blend = m_settings.Blend;
 
 	m_emitter = std::make_unique<ParticleEmitter<SimpleParticle>>(config);
 	m_emitter->AddInitializer(std::make_shared<SettingsInitializer>(m_settings, m_random));
 	m_emitter->AddUpdater(std::make_shared<SettingsUpdater>(m_settings));
-	m_emitter->SetDrawer(std::make_shared<CircleDrawer>());
+	m_emitter->SetDrawer(CreateDrawer());
 	m_emitter->SetPosition(m_position);
+}
+
+void PreviewEffect::SetTexture(std::shared_ptr<Texture> texture)
+{
+	m_texture = std::move(texture);
+	m_emitter->SetDrawer(CreateDrawer());
+}
+
+std::shared_ptr<IParticleDrawer> PreviewEffect::CreateDrawer() const
+{
+	if (m_texture) return std::make_shared<TextureParticleDrawer>(m_texture);
+	return std::make_shared<CircleParticleDrawer>();
 }
 
 void PreviewEffect::SetPosition(const Vector2& position)
@@ -131,7 +133,8 @@ void PreviewEffect::Update(const GameTime& gameTime)
 
 void PreviewEffect::Draw(SpriteBatch& spriteBatch)
 {
-	m_emitter->Draw(spriteBatch);
+	m_emitter->SetBlendState(m_settings.Blend);
+	m_emitter->DrawBatch(spriteBatch);
 }
 
 int PreviewEffect::GetActiveParticleCount() const

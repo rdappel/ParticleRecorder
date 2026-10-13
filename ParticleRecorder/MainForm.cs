@@ -36,7 +36,14 @@ public sealed class MainForm : Form
 
         var restartButton = new ToolStripButton("Restart Effect");
         restartButton.Click += (_, _) => _viewport.Post("restart");
-        var toolStrip = new ToolStrip(restartButton) { GripStyle = ToolStripGripStyle.Hidden };
+        var loadTextureButton = new ToolStripButton("Load Texture...");
+        loadTextureButton.Click += (_, _) => ChooseTexture();
+        var clearTextureButton = new ToolStripButton("Clear Texture");
+        clearTextureButton.Click += (_, _) => SetTexture(string.Empty);
+        var toolStrip = new ToolStrip(restartButton, new ToolStripSeparator(), loadTextureButton, clearTextureButton)
+        {
+            GripStyle = ToolStripGripStyle.Hidden,
+        };
 
         _statusLabel = new ToolStripStatusLabel("Starting preview...") { Spring = true, TextAlign = ContentAlignment.MiddleLeft };
         _particleCountLabel = new ToolStripStatusLabel("Particles: 0");
@@ -51,6 +58,27 @@ public sealed class MainForm : Form
         Controls.Add(statusStrip);
 
         _viewport.GameLibraryPath = NativeGameLibrary;
+    }
+
+    private void ChooseTexture()
+    {
+        using var dialog = new OpenFileDialog
+        {
+            Title = "Choose Particle Texture",
+            Filter = ImageFileNameEditor.ImageFilter,
+        };
+        if (!string.IsNullOrEmpty(_settings.Texture))
+            dialog.InitialDirectory = Path.GetDirectoryName(_settings.Texture);
+
+        if (dialog.ShowDialog(this) == DialogResult.OK) SetTexture(dialog.FileName);
+    }
+
+    private void SetTexture(string path)
+    {
+        _settings.Texture = path;
+        _propertyGrid.Refresh();
+        _statusLabel.Text = string.IsNullOrEmpty(path) ? "Drawing circles" : $"Texture: {Path.GetFileName(path)}";
+        SendSetting(nameof(ParticleSettings.Texture));
     }
 
     private void SendSetting(string? propertyName)

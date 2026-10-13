@@ -21,13 +21,22 @@ struct ParticleSettings
 	float Spread = 40.0f;			// degrees either side of Direction
 	float Gravity = 120.0f;			// pixels per second squared (positive = down)
 
-	float StartSize = 6.0f;			// radius in pixels
-	float EndSize = 1.0f;
+	float RotationMin = 0.0f;		// initial rotation, degrees
+	float RotationMax = 0.0f;
+	float SpinMin = 0.0f;			// degrees per second
+	float SpinMax = 0.0f;
+
+	float StartSize = 12.0f;		// diameter in pixels (texture: its longer side)
+	float EndSize = 2.0f;
 	Color StartColor = Color(1.0f, 0.75f, 0.2f, 1.0f);
 	Color EndColor = Color(0.9f, 0.1f, 0.05f, 0.0f);
+
+	std::string Texture;			// absolute path; empty = draw circles
+	BlendState Blend = BlendState::ALPHA_BLEND;
 };
 
-// Applies one "Name value" pair. Colors are "r,g,b,a" with 0-255 components.
+// Applies one "Name value" pair. Colors are "r,g,b,a" with 0-255 components; Blend is
+// "Alpha" or "Additive"; Texture is a file path (may be empty).
 // Returns false for unknown names or malformed values (the settings are left unchanged).
 bool ApplySetting(ParticleSettings& settings, const std::string& name, const std::string& value);
 
