@@ -154,6 +154,7 @@ bool ParticleRecorderGame::HandlePreviewMessage(const std::string& command, std:
 
 	if (name == "play") m_previewScreen->Play();
 	else if (name == "pause") m_previewScreen->Pause();
+	else if (name == "loop") m_previewScreen->SetLooping(value == "1");
 	else if (name == "frame") m_previewScreen->SetFrame(std::atoi(value.c_str()));
 	else if (name == "zoom") m_previewScreen->SetZoom(static_cast<float>(std::atof(value.c_str())));
 	else if (name == "background" && value == "dark") m_previewScreen->SetBackground(AnimationPreviewScreen::Background::DARK);

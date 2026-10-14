@@ -63,6 +63,7 @@ namespace ParticleRecorder
             playButton = new Button();
             previousFrameButton = new Button();
             nextFrameButton = new Button();
+            loopPreviewCheckBox = new CheckBox();
             frameTrackBar = new TrackBar();
             frameLabel = new Label();
             backgroundLabel = new Label();
@@ -298,6 +299,7 @@ namespace ParticleRecorder
             previewPanel.Controls.Add(playButton);
             previewPanel.Controls.Add(previousFrameButton);
             previewPanel.Controls.Add(nextFrameButton);
+            previewPanel.Controls.Add(loopPreviewCheckBox);
             previewPanel.Controls.Add(frameTrackBar);
             previewPanel.Controls.Add(frameLabel);
             previewPanel.Controls.Add(backgroundLabel);
@@ -353,15 +355,26 @@ namespace ParticleRecorder
             nextFrameButton.UseVisualStyleBackColor = true;
             nextFrameButton.Click += nextFrameButton_Click;
             //
+            // loopPreviewCheckBox
+            //
+            loopPreviewCheckBox.AutoSize = true;
+            loopPreviewCheckBox.Location = new Point(264, 10);
+            loopPreviewCheckBox.Name = "loopPreviewCheckBox";
+            loopPreviewCheckBox.Size = new Size(53, 19);
+            loopPreviewCheckBox.TabIndex = 4;
+            loopPreviewCheckBox.Text = "Loop";
+            loopPreviewCheckBox.UseVisualStyleBackColor = true;
+            loopPreviewCheckBox.CheckedChanged += loopPreviewCheckBox_CheckedChanged;
+            //
             // frameTrackBar
             //
             frameTrackBar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             frameTrackBar.AutoSize = false;
-            frameTrackBar.Location = new Point(260, 7);
+            frameTrackBar.Location = new Point(322, 7);
             frameTrackBar.Maximum = 0;
             frameTrackBar.Name = "frameTrackBar";
-            frameTrackBar.Size = new Size(190, 26);
-            frameTrackBar.TabIndex = 4;
+            frameTrackBar.Size = new Size(128, 26);
+            frameTrackBar.TabIndex = 5;
             frameTrackBar.TickStyle = TickStyle.None;
             frameTrackBar.Scroll += frameTrackBar_Scroll;
             //
@@ -371,7 +384,7 @@ namespace ParticleRecorder
             frameLabel.Location = new Point(455, 11);
             frameLabel.Name = "frameLabel";
             frameLabel.Size = new Size(96, 15);
-            frameLabel.TabIndex = 5;
+            frameLabel.TabIndex = 6;
             frameLabel.Text = "Frame 1 / 1";
             //
             // backgroundLabel
@@ -381,7 +394,7 @@ namespace ParticleRecorder
             backgroundLabel.Location = new Point(557, 11);
             backgroundLabel.Name = "backgroundLabel";
             backgroundLabel.Size = new Size(71, 15);
-            backgroundLabel.TabIndex = 6;
+            backgroundLabel.TabIndex = 7;
             backgroundLabel.Text = "Background";
             //
             // backgroundComboBox
@@ -392,7 +405,7 @@ namespace ParticleRecorder
             backgroundComboBox.Location = new Point(631, 7);
             backgroundComboBox.Name = "backgroundComboBox";
             backgroundComboBox.Size = new Size(100, 23);
-            backgroundComboBox.TabIndex = 7;
+            backgroundComboBox.TabIndex = 8;
             backgroundComboBox.SelectedIndexChanged += backgroundComboBox_SelectedIndexChanged;
             //
             // zoomLabel
@@ -402,7 +415,7 @@ namespace ParticleRecorder
             zoomLabel.Location = new Point(739, 11);
             zoomLabel.Name = "zoomLabel";
             zoomLabel.Size = new Size(39, 15);
-            zoomLabel.TabIndex = 8;
+            zoomLabel.TabIndex = 9;
             zoomLabel.Text = "Zoom";
             //
             // zoomComboBox
@@ -413,7 +426,7 @@ namespace ParticleRecorder
             zoomComboBox.Location = new Point(781, 7);
             zoomComboBox.Name = "zoomComboBox";
             zoomComboBox.Size = new Size(66, 23);
-            zoomComboBox.TabIndex = 9;
+            zoomComboBox.TabIndex = 10;
             zoomComboBox.SelectedIndexChanged += zoomComboBox_SelectedIndexChanged;
             //
             // recordAgainButton
@@ -422,7 +435,7 @@ namespace ParticleRecorder
             recordAgainButton.Location = new Point(855, 6);
             recordAgainButton.Name = "recordAgainButton";
             recordAgainButton.Size = new Size(100, 26);
-            recordAgainButton.TabIndex = 10;
+            recordAgainButton.TabIndex = 11;
             recordAgainButton.Text = "Record Again";
             recordAgainButton.UseVisualStyleBackColor = true;
             recordAgainButton.Click += recordMenuItem_Click;
@@ -433,7 +446,7 @@ namespace ParticleRecorder
             savePreviewButton.Location = new Point(961, 6);
             savePreviewButton.Name = "savePreviewButton";
             savePreviewButton.Size = new Size(90, 26);
-            savePreviewButton.TabIndex = 11;
+            savePreviewButton.TabIndex = 12;
             savePreviewButton.Text = "Save...";
             savePreviewButton.UseVisualStyleBackColor = true;
             savePreviewButton.Click += saveAnimationMenuItem_Click;
@@ -502,6 +515,7 @@ namespace ParticleRecorder
         private Button playButton;
         private Button previousFrameButton;
         private Button nextFrameButton;
+        private CheckBox loopPreviewCheckBox;
         private TrackBar frameTrackBar;
         private Label frameLabel;
         private Label backgroundLabel;

@@ -358,6 +358,7 @@ public sealed partial class MainForm : Form
         particleCountLabel.Visible = false;
 
         // A new recording starts with the native defaults; keep the viewer's choices.
+        SendPreviewLooping();
         SendPreviewBackground();
         SendPreviewZoom();
 
@@ -387,6 +388,8 @@ public sealed partial class MainForm : Form
 
     private void frameTrackBar_Scroll(object? sender, EventArgs e) => viewport.Post($"preview frame {frameTrackBar.Value}");
 
+    private void loopPreviewCheckBox_CheckedChanged(object? sender, EventArgs e) => SendPreviewLooping();
+
     private void backgroundComboBox_SelectedIndexChanged(object? sender, EventArgs e) => SendPreviewBackground();
 
     private void zoomComboBox_SelectedIndexChanged(object? sender, EventArgs e) => SendPreviewZoom();
@@ -396,6 +399,13 @@ public sealed partial class MainForm : Form
         var frame = Math.Clamp(frameTrackBar.Value + offset, 0, frameTrackBar.Maximum);
         viewport.Post("preview pause");
         viewport.Post($"preview frame {frame}");
+    }
+
+    private void SendPreviewLooping()
+    {
+        if (!IsPreviewingAnimation) return;
+
+        viewport.Post($"preview loop {(loopPreviewCheckBox.Checked ? 1 : 0)}");
     }
 
     private void SendPreviewBackground()

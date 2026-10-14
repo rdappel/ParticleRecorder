@@ -14,7 +14,7 @@ class AnimationPreviewScreen;
 //     restart               restart the preview effect
 //     measure <options>     fit a recording to the effect (options: see ParseRecordingOptions)
 //     record <options>      record into memory and show the animation preview
-//     preview play | pause | frame <index> | background dark|light|checker | zoom <scale, 0 = fit>
+//     preview play | pause | loop 0|1 | frame <index> | background dark|light|checker | zoom <scale, 0 = fit>
 //     save <png path>       write the previewed recording as <png> + .anim
 //     close                 close the animation preview (back to the live effect)
 // Game -> host messages:

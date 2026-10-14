@@ -35,7 +35,8 @@ All messages are UTF-8 strings. Values use the invariant culture.
 | UI → game | `restart` | Restart the preview effect. |
 | UI → game | `measure <options>` | Simulate a recording and fit the canvas to it. Options are `key=value` pairs: `seed`, `fps`, `duration`, `prewarm` (seconds, 0 = off), `padding`, `columns` (0 = auto), `loop` (0/1). |
 | UI → game | `record <options>` | Record into memory (same options as `measure`) and show the animation preview over the live effect. Replaces any previous recording. |
-| UI → game | `preview play` / `preview pause` | Start or stop playback. Playing a finished non-looping animation starts it again. |
+| UI → game | `preview play` / `preview pause` | Start or stop playback. Playing after playback has finished starts it again. |
+| UI → game | `preview loop 0\|1` | Whether playback repeats (default `0`: stop on the last frame). Preview only; doesn't change the `.anim`. |
 | UI → game | `preview frame <index>` | Show a frame (0-based). |
 | UI → game | `preview background dark\|light\|checker` | What is drawn behind the frame. |
 | UI → game | `preview zoom <scale>` | Draw scale; `0` fits the frame (actual size, or smaller if it doesn't fit). |
@@ -96,8 +97,9 @@ The title bar shows the effect's name, with `*` when there are unsaved changes; 
    - **warns if the sheet would be larger than 4096 px** on either side, which some graphics cards can't load. You can record anyway; there's no hard limit;
    - records the same simulation frame by frame into a transparent frame and packs the frames into a sheet in memory;
    - opens the **animation preview**.
-4. **Check it in the preview.** The viewport plays the recording exactly as a game would (one frame every `1/fps` seconds, with the effect's blend, holding the last frame if Loop is off). The bar above it has:
+4. **Check it in the preview.** The viewport plays the recording exactly as a game would (one frame every `1/fps` seconds, with the effect's blend). The bar above it has:
    - **Play/Pause**, **◀ ▶** to step one frame, and a slider to scrub (arrow keys step while it has focus);
+   - **Loop:** off by default, so playback runs once and stops on the last frame (Play starts it again). Tick it to keep the animation repeating. This only affects the preview; the `.anim` file's Loop comes from Recording Settings;
    - **Background:** Dark, Light, or Checkerboard (shows exactly which pixels are transparent). The thin outline is the frame's auto-fitted edge;
    - **Zoom:** Fit (actual size, or smaller if the frame doesn't fit), 100%, 200% or 400% (pixels stay sharp);
    - **Record Again**: a new recording with a new random seed, picking up any changes to the effect or recording settings (the status bar says when the effect has changed since the recording);

@@ -36,7 +36,7 @@ bool AnimationPreviewScreen::CreateFrameTexture(std::string& error)
 
 void AnimationPreviewScreen::Play()
 {
-	if (!m_recording->Options.Loop && m_frameIndex == GetLastFrame()) SetFrame(0);
+	if (!m_isLooping && m_frameIndex == GetLastFrame()) SetFrame(0);
 
 	m_isPlaying = true;
 	m_frameElapsedSeconds = 0.0;
@@ -72,11 +72,11 @@ void AnimationPreviewScreen::Update(const GameTime& gameTime)
 	const int frameCount = m_recording->Layout.FrameCount;
 
 	int index = m_frameIndex + steps;
-	if (m_recording->Options.Loop) index %= frameCount;
+	if (m_isLooping) index %= frameCount;
 	else if (index >= GetLastFrame())
 	{
 		index = GetLastFrame();
-		m_isPlaying = false;	// a non-looping animation holds its last frame, as in a game
+		m_isPlaying = false;	// holds the last frame, as a non-looping animation does in a game
 	}
 
 	SetFrame(index);

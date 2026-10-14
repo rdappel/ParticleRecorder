@@ -28,7 +28,7 @@ public:
 
 	const Recording& GetRecording() const { return *m_recording; }
 
-	// Plays from the current frame, or from the start if a non-looping animation has finished.
+	// Plays from the current frame, or from the start if playback has finished.
 	void Play();
 	void Pause();
 	bool IsPlaying() const { return m_isPlaying; }
@@ -36,6 +36,10 @@ public:
 	// Shows a frame (clamped to the recording); playback continues from there.
 	void SetFrame(int index);
 	int GetFrameIndex() const { return m_frameIndex; }
+
+	// When off (the default), playback stops on the last frame. Preview only: the .anim's
+	// Loop comes from the recording options.
+	void SetLooping(bool looping) { m_isLooping = looping; }
 
 	void SetBackground(Background background) { m_background = background; }
 
@@ -57,6 +61,7 @@ private:
 	int m_frameIndex = 0;
 	double m_frameElapsedSeconds = 0.0;
 	bool m_isPlaying = true;
+	bool m_isLooping = false;
 	Background m_background = Background::DARK;
 	float m_zoom = 0.0f;
 };
