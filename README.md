@@ -2,9 +2,9 @@
 
 A desktop tool for designing particle effects with **KatanaEngine** and "recording" them into sprite-sheet animations that any Katana game can load.
 
-You tune an emitter in a WinForms editor and watch the result live in an embedded KatanaEngine viewport. Recording captures the effect frame by frame and exports a PNG sprite sheet plus an `AnimationSet` file. A game then plays the effect as a cheap animation instead of simulating particles at runtime.
+You tune an emitter in a WinForms editor and watch the result live in an embedded KatanaEngine viewport. Recording captures the effect frame by frame, plays it back for you to check, and saves a PNG sprite sheet plus an `AnimationSet` file. A game then plays the effect as a cheap animation instead of simulating particles at runtime.
 
-> **Status:** early but usable: design an effect, save it, and export it as a sprite sheet + `.anim`. A movable emitter is next (see [Roadmap](#roadmap)).
+> **Status:** early but usable: design an effect, save it, record it, preview the animation, and save it as a sprite sheet + `.anim`. A movable emitter is next (see [Roadmap](#roadmap)).
 
 ## Architecture
 
@@ -12,14 +12,15 @@ You tune an emitter in a WinForms editor and watch the result live in an embedde
 ParticleRecorder.exe (C#, WinForms, .NET 10)
 ├── PropertyGrid ── edits ──► ParticleSettings (C# owns all effect data)
 └── KatanaViewport (KatanaEngine.WinForms) ── hosts ──► ParticleRecorder.Native.dll (C++, KatanaEngine)
-        │  "set", "restart", "measure", "export"  ──►  ParticleRecorderGame → RecorderScreen → PreviewEffect / Recorder
-        ◄──  "ready", "stats", "measured", "exported", "error"
+        │  "set", "restart", "measure", "record", "preview", "save", "close"
+        │      ──►  ParticleRecorderGame → RecorderScreen (PreviewEffect, Recorder) / AnimationPreviewScreen
+        ◄──  "ready", "stats", "measured", "recorded", "frame", "saved", "error"
 ```
 
 | Project | Language | Role |
 |---|---|---|
-| `ParticleRecorder/` | C# WinForms | Editor UI: menu bar, settings grid, Recording Settings dialog, status bar. Owns the effect data (and its `.keparticle` files) and pushes every change to the preview. |
-| `ParticleRecorder.Native/` | C++ DLL | The KatanaEngine game that renders the preview and records sprite sheets. Exports the hosting API via `KATANA_DEFINE_HOST_EXPORTS`. |
+| `ParticleRecorder/` | C# WinForms | Editor UI: menu bar, settings grid, Recording Settings dialog, animation preview bar, status bar. Owns the effect data (and its `.keparticle` files) and pushes every change to the preview. |
+| `ParticleRecorder.Native/` | C++ DLL | The KatanaEngine game that renders the live effect, records it into a sprite sheet in memory, plays the recording back, and saves it. Exports the hosting API via `KATANA_DEFINE_HOST_EXPORTS`. |
 | `KatanaEngine/` | submodule | The engine ([rdappel/KatanaEngine](https://github.com/rdappel/KatanaEngine)), including `KatanaEngine.WinForms`, the reusable `KatanaViewport` control. |
 
 The viewport is a real KatanaEngine/Allegro window embedded as a child of the WinForms control. That means the preview and the recording use the same `SpriteBatch` and particle code a game uses: what you record is what a game would draw. See the engine README's *Hosting a game inside a WinForms app* section for how this works.
@@ -33,12 +34,20 @@ All messages are UTF-8 strings. Values use the invariant culture.
 | UI → game | `set <Name> <value>` | Change one `ParticleSettings` value. Colors are `r,g,b,a` (0–255). `Blend` is `Alpha` or `Additive`. `Texture` is an absolute image path, or empty for circles. |
 | UI → game | `restart` | Restart the preview effect. |
 | UI → game | `measure <options>` | Simulate a recording and fit the canvas to it. Options are `key=value` pairs: `seed`, `fps`, `duration`, `prewarm` (seconds, 0 = off), `padding`, `columns` (0 = auto), `loop` (0/1). |
-| UI → game | `export <options> path=<png>` | Record and write `<png>` plus a matching `.anim`. `path` comes last and may contain spaces. |
+| UI → game | `record <options>` | Record into memory (same options as `measure`) and show the animation preview over the live effect. Replaces any previous recording. |
+| UI → game | `preview play` / `preview pause` | Start or stop playback. Playing a finished non-looping animation starts it again. |
+| UI → game | `preview frame <index>` | Show a frame (0-based). |
+| UI → game | `preview background dark\|light\|checker` | What is drawn behind the frame. |
+| UI → game | `preview zoom <scale>` | Draw scale; `0` fits the frame (actual size, or smaller if it doesn't fit). |
+| UI → game | `save <png>` | Write the recording as `<png>` plus a matching `.anim`. The path is the rest of the message and may contain spaces. |
+| UI → game | `close` | Close the animation preview and show the live effect again. |
 | game → UI | `ready` | Preview loaded. The UI responds by sending every setting. |
 | game → UI | `stats <active>` | Active particle count, a few times per second. |
 | game → UI | `measured <frames> <frameW> <frameH> <sheetW> <sheetH>` | Reply to `measure`. |
-| game → UI | `exported <frames> <frameW> <frameH> <sheetW> <sheetH>` | Reply to `export`: the files were written. |
-| game → UI | `error <text>` | A message could not be applied (during an export, the export failed). |
+| game → UI | `recorded <frames> <frameW> <frameH> <sheetW> <sheetH>` | Reply to `record`: the preview is showing. |
+| game → UI | `frame <index> <playing>` | The preview's frame and whether it is playing (`0`/`1`), sent whenever either changes. |
+| game → UI | `saved` | Reply to `save`: the files were written. |
+| game → UI | `error <text>` | A message could not be applied (during `measure`, `record` or `save`, that step failed). |
 
 `ParticleSettings` exists twice and must stay in sync: `ParticleRecorder/Effects/ParticleSettings.cs` (UI, source of truth) and `ParticleRecorder.Native/Source/Particles/ParticleSettings.h` (`ApplySetting`).
 
@@ -66,9 +75,9 @@ KatanaEngine blends with premultiplied alpha, so soft-edged textures don't get d
 
 | Menu | Items |
 |---|---|
-| File | New Effect (Ctrl+N), Open Effect... (Ctrl+O), Save Effect (Ctrl+S), Save Effect As... (Ctrl+Shift+S), Export Animation... (Ctrl+E), Exit |
+| File | New Effect (Ctrl+N), Open Effect... (Ctrl+O), Save Effect (Ctrl+S), Save Effect As... (Ctrl+Shift+S), Record Animation (Ctrl+R), Save Animation... (Ctrl+E, while previewing), Exit |
 | Edit | Load Texture..., Clear Texture, Recording Settings... |
-| View | Restart Preview (F5), Settings Panel (show/hide the grid) |
+| View | Restart Preview (F5; while previewing a recording, plays it from the start), Settings Panel (show/hide the grid) |
 
 The title bar shows the effect's name, with `*` when there are unsaved changes; New, Open and closing the window ask before discarding them.
 
@@ -82,11 +91,18 @@ The title bar shows the effect's name, with `*` when there are unsaved changes; 
    - **Padding**: transparent pixels around the effect.
    - **Frames per row**: 0 picks the layout that keeps the sheet closest to square.
    - There is no canvas size: it is **fitted automatically** to every particle that is visible at any point in the animation.
-3. **File > Export Animation...** and choose a `.png` name. The tool:
+3. **File > Record Animation** (Ctrl+R). The tool:
    - simulates the recording once to measure it (fixed `1/fps` step and a fixed random seed, so it's repeatable and independent of the live preview);
-   - **warns if the sheet would be larger than 4096 px** on either side, which some graphics cards can't load. You can export anyway; there's no hard limit;
-   - records the same simulation frame by frame into a transparent frame and packs the frames into the sheet;
-   - writes `<name>.png` and `<name>.anim` side by side.
+   - **warns if the sheet would be larger than 4096 px** on either side, which some graphics cards can't load. You can record anyway; there's no hard limit;
+   - records the same simulation frame by frame into a transparent frame and packs the frames into a sheet in memory;
+   - opens the **animation preview**.
+4. **Check it in the preview.** The viewport plays the recording exactly as a game would (one frame every `1/fps` seconds, with the effect's blend, holding the last frame if Loop is off). The bar above it has:
+   - **Play/Pause**, **◀ ▶** to step one frame, and a slider to scrub (arrow keys step while it has focus);
+   - **Background:** Dark, Light, or Checkerboard (shows exactly which pixels are transparent). The thin outline is the frame's auto-fitted edge;
+   - **Zoom:** Fit (actual size, or smaller if the frame doesn't fit), 100%, 200% or 400% (pixels stay sharp);
+   - **Record Again**: a new recording with a new random seed, picking up any changes to the effect or recording settings (the status bar says when the effect has changed since the recording);
+   - **Back to Editor**: discards the recording and returns to the live effect.
+5. **Save...** (or **File > Save Animation...**, Ctrl+E) and choose a `.png` name. It writes `<name>.png` and `<name>.anim` side by side, from exactly the frames you previewed. You can keep previewing and save again.
 
 The `.anim` file uses exactly the keys `KatanaEngine/Source/Core/Resource/AnimationSet.cpp` parses:
 
@@ -114,8 +130,8 @@ The PNG has straight (non-premultiplied) alpha, as image files normally do; Kata
 - [x] Menu bar, effect files (`.keparticle`)
 - [x] Recording settings, auto-fit canvas, prewarm
 - [x] Deterministic frame capture and sprite-sheet + `.anim` export
+- [x] Animation preview before saving: playback, frame stepping, backgrounds, zoom
 - [ ] **Emitter path:** draw a path with a pen tool (a group of splines; the engine already has `Spline`), and the emitter moves along it during the animation. The recorder already takes the emitter's position from a single function (`EmitterPositionAt` in `Recorder.cpp`) for this.
-- [ ] Preview of the exported animation (play it back through `AnimationSet`)
 
 **Ideas for later:** PNG-sequence or GIF export, helpers for seamless loops, and multiple emitters per effect.
 

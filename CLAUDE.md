@@ -20,13 +20,13 @@ Output: `ParticleRecorder/bin/<Configuration>/net10.0-windows/ParticleRecorder.e
 ## Rules
 
 ### C# owns the data
-Effect settings live in `ParticleRecorder/Effects/ParticleSettings.cs`, recording settings in `RecordingSettings.cs`. The native side only holds a mirror that it updates from `set` messages, and receives recording settings as `measure`/`export` options; it never decides values on its own. On `ready` the UI resends everything.
+Effect settings live in `ParticleRecorder/Effects/ParticleSettings.cs`, recording settings in `RecordingSettings.cs`. The native side only holds a mirror that it updates from `set` messages, and receives recording settings as `measure`/`record` options; it never decides values on its own. On `ready` the UI resends everything.
 
 ### Effect files
 `*.keparticle` is JSON written by `ParticleRecorder/Effects/EffectDocument.cs` (`version`, `particles`, `recording`; colours `#RRGGBB`; texture relative to the file). New settings get defaults when missing, so old files keep loading. Bump `CurrentVersion` only for breaking changes, and keep reading older versions.
 
 ### Recording must stay deterministic
-`ParticleRecorder.Native/Source/Recording/Recorder.cpp` simulates with a fixed `1/fps` step and the seed from the message, so a `measure` and the `export` that follows produce the same particles. Don't read real time, the live preview, or an unseeded random source while recording. The emitter's position comes only from `EmitterPositionAt`, where the planned emitter path plugs in.
+`ParticleRecorder.Native/Source/Recording/Recorder.cpp` simulates with a fixed `1/fps` step and the seed from the message, so a `measure` and the `record` that follows produce the same particles. Don't read real time, the live preview, or an unseeded random source while recording. `save` writes the recording held in memory (the frames the user previewed); it never re-simulates. The emitter's position comes only from `EmitterPositionAt`, where the planned emitter path plugs in.
 
 ### Keep the two ParticleSettings in sync
 Adding or renaming a setting means updating **both** `ParticleSettings.cs` and `ParticleRecorder.Native/Source/Particles/ParticleSettings.h/.cpp` (`ApplySetting`, `RequiresEmitterRebuild`). Then update the protocol table in `README.md`.

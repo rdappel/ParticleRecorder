@@ -5,7 +5,7 @@ namespace ParticleRecorder.Effects;
 
 /// <summary>
 /// How an effect is recorded into a sprite sheet. Sent to the native recorder as the
-/// options of a "measure" or "export" message (see ParticleRecorder.Native/Source/Recording/Recorder.h).
+/// options of a "measure" or "record" message (see ParticleRecorder.Native/Source/Recording/Recorder.h).
 /// The canvas size isn't a setting: the recorder fits it to every visible particle.
 /// </summary>
 public sealed class RecordingSettings
@@ -37,7 +37,7 @@ public sealed class RecordingSettings
 
     public RecordingSettings Clone() => (RecordingSettings)MemberwiseClone();
 
-    /// <summary>The key=value options for a "measure"/"export" message (without path).</summary>
+    /// <summary>The key=value options for a "measure"/"record" message.</summary>
     public string ToOptions(uint seed) => string.Create(CultureInfo.InvariantCulture,
         $"seed={seed} fps={Fps} duration={Duration} prewarm={(PrewarmEnabled ? PrewarmSeconds : 0f)} padding={Padding} columns={Columns} loop={(Loop ? 1 : 0)}");
 }

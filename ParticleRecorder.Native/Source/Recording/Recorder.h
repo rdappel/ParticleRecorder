@@ -2,26 +2,25 @@
 
 #include "pch.h"
 #include "Particles/ParticleSettings.h"
+#include "Core/Resource/Image.h"
 
 using namespace KatanaEngine;
 
-// How to record an effect. Parsed from the host's "measure"/"export" messages.
+// How to record an effect. Parsed from the host's "measure"/"record" messages.
 struct RecordingOptions
 {
-	unsigned int Seed = 1;		// same seed = same particles, so a measure matches its export
+	unsigned int Seed = 1;		// same seed = same particles, so a measure matches its recording
 	float Fps = 30.0f;
 	float Duration = 1.0f;		// seconds of animation
 	float Prewarm = 0.0f;		// seconds simulated before the first frame (0 = start empty)
 	int Padding = 2;			// transparent pixels around the effect's bounds
 	int Columns = 0;			// frames per sprite-sheet row (0 = choose automatically)
 	bool Loop = true;			// written to the .anim file
-	std::string Path;			// export only: the .png to write (the .anim goes next to it)
 
 	int GetFrameCount() const;
 };
 
-// Parses "key=value" pairs (seed, fps, duration, prewarm, padding, columns, loop, path).
-// path must come last; its value is the rest of the text, so it may contain spaces.
+// Parses space-separated "key=value" pairs (seed, fps, duration, prewarm, padding, columns, loop).
 bool ParseRecordingOptions(const std::string& text, RecordingOptions& options, std::string& error);
 
 // Where the recorded effect sits and how the frames are packed.
@@ -36,6 +35,22 @@ struct RecordingLayout
 
 	int GetSheetWidth() const { return FrameWidth * Columns; }
 	int GetSheetHeight() const { return FrameHeight * Rows; }
+
+	// Where frame index's cell starts in the sheet.
+	int GetFrameX(int index) const { return (index % Columns) * FrameWidth; }
+	int GetFrameY(int index) const { return (index / Columns) * FrameHeight; }
+};
+
+// A finished recording, held in memory until it is saved or discarded.
+struct Recording
+{
+	RecordingOptions Options;
+	RecordingLayout Layout;
+	BlendState Blend = BlendState::ALPHA_BLEND;	// how the effect was drawn, and how a game should draw it
+	Image Sheet;								// every frame, packed as Layout describes (premultiplied)
+
+	// Writes the sheet to pngPath and a matching .anim (AnimationSet format) next to it.
+	bool Save(const std::string& pngPath, std::string& error) const;
 };
 
 // Records an effect deterministically: the simulation advances exactly 1/fps per frame
@@ -52,9 +67,8 @@ public:
 	// Simulates the whole recording and fits the frame to every visible particle.
 	bool Measure(const RecordingOptions& options, RecordingLayout& layout, std::string& error) const;
 
-	// Measures, then renders every frame into a sprite sheet and writes <Path> plus a
-	// matching .anim file (AnimationSet format).
-	bool Export(const RecordingOptions& options, RecordingLayout& layout, std::string& error) const;
+	// Measures, then renders every frame into recording's sprite sheet.
+	bool Record(const RecordingOptions& options, Recording& recording, std::string& error) const;
 
 private:
 

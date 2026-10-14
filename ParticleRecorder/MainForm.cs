@@ -16,7 +16,7 @@ public sealed partial class MainForm : Form
     private string? _effectPath;
     private bool _isDirty;
 
-    // The reply the export flow is waiting for ("measured"/"exported", or an error).
+    // The reply a recording request is waiting for ("measured", "recorded" or "saved", or an error).
     private TaskCompletionSource<string>? _pendingReply;
 
     public MainForm()
@@ -26,6 +26,8 @@ public sealed partial class MainForm : Form
         // Runtime data the designer can't hold: the settings object and the shared image filter.
         propertyGrid.SelectedObject = _settings;
         openTextureDialog.Filter = ImageFileNameEditor.ImageFilter;
+        backgroundComboBox.SelectedIndex = 0;
+        zoomComboBox.SelectedIndex = 0;
         UpdateTitle();
     }
 
@@ -62,7 +64,9 @@ public sealed partial class MainForm : Form
 
     private void saveAsMenuItem_Click(object? sender, EventArgs e) => SaveEffect(saveAs: true);
 
-    private async void exportMenuItem_Click(object? sender, EventArgs e) => await ExportAnimationAsync();
+    private async void recordMenuItem_Click(object? sender, EventArgs e) => await RecordAnimationAsync();
+
+    private async void saveAnimationMenuItem_Click(object? sender, EventArgs e) => await SaveAnimationAsync();
 
     private void exitMenuItem_Click(object? sender, EventArgs e) => Close();
 
@@ -88,7 +92,17 @@ public sealed partial class MainForm : Form
 
     // ---- Menu: View ----
 
-    private void restartPreviewMenuItem_Click(object? sender, EventArgs e) => viewport.Post("restart");
+    private void restartPreviewMenuItem_Click(object? sender, EventArgs e)
+    {
+        if (!IsPreviewingAnimation)
+        {
+            viewport.Post("restart");
+            return;
+        }
+
+        viewport.Post("preview frame 0");
+        viewport.Post("preview play");
+    }
 
     private void settingsPanelMenuItem_CheckedChanged(object? sender, EventArgs e) =>
         propertyGrid.Visible = splitter.Visible = settingsPanelMenuItem.Checked;
@@ -151,8 +165,11 @@ public sealed partial class MainForm : Form
             case "stats":
                 particleCountLabel.Text = $"Particles: {argument}";
                 break;
-            case "measured" or "exported":
+            case "measured" or "recorded" or "saved":
                 _pendingReply?.TrySetResult(message);
+                break;
+            case "frame":
+                ShowPlaybackPosition(argument);
                 break;
             case "error" when _pendingReply != null:
                 _pendingReply.TrySetException(new RecordingException(argument));
@@ -167,6 +184,8 @@ public sealed partial class MainForm : Form
 
     private void LoadEffect(ParticleSettings particles, RecordingSettings recording, string? path)
     {
+        ClosePreview();
+
         _settings = particles;
         _recording = recording;
         _effectPath = path;
@@ -225,6 +244,7 @@ public sealed partial class MainForm : Form
 
     private void MarkDirty()
     {
+        if (IsPreviewingAnimation) statusLabel.Text = "The effect changed since this recording: Record Again to update the preview.";
         if (_isDirty) return;
 
         _isDirty = true;
@@ -235,7 +255,11 @@ public sealed partial class MainForm : Form
 
     // ---- Recording ----
 
-    private async Task ExportAnimationAsync()
+    // True while the animation preview (and its bar) is shown instead of the live effect.
+    private bool IsPreviewingAnimation { get; set; }
+
+    /// <summary>Records the effect into memory and shows it in the animation preview, ready to save.</summary>
+    private async Task RecordAnimationAsync()
     {
         if (!viewport.IsRunning)
         {
@@ -243,10 +267,6 @@ public sealed partial class MainForm : Form
             return;
         }
 
-        exportDialog.FileName = EffectName + ".png";
-        if (exportDialog.ShowDialog(this) != DialogResult.OK) return;
-
-        var pngPath = exportDialog.FileName;
         var options = _recording.ToOptions(seed: (uint)Random.Shared.Next(1, int.MaxValue));
 
         SetBusy(true, "Measuring the animation...");
@@ -259,24 +279,51 @@ public sealed partial class MainForm : Form
                     $"The sprite sheet will be {measured.SheetWidth}×{measured.SheetHeight} pixels " +
                     $"({measured.Frames} frames of {measured.FrameWidth}×{measured.FrameHeight}).\n\n" +
                     $"Some graphics cards can't load textures larger than {SafeTextureSize}×{SafeTextureSize}. " +
-                    "Fewer frames, a lower frame rate or a smaller effect will reduce it.\n\nExport anyway?",
+                    "Fewer frames, a lower frame rate or a smaller effect will reduce it.\n\nRecord anyway?",
                     AppName, MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (answer != DialogResult.Yes)
                 {
-                    statusLabel.Text = "Export cancelled";
+                    statusLabel.Text = "Recording cancelled";
                     return;
                 }
             }
 
             statusLabel.Text = "Recording...";
-            var exported = RecordingResult.Parse(await RequestAsync($"export {options} path={pngPath}"));
-            statusLabel.Text = $"Exported {Path.GetFileName(pngPath)} + {Path.GetFileNameWithoutExtension(pngPath)}.anim: " +
-                $"{exported.Frames} frames of {exported.FrameWidth}×{exported.FrameHeight} ({exported.SheetWidth}×{exported.SheetHeight})";
+            var recorded = RecordingResult.Parse(await RequestAsync($"record {options}"));
+            ShowPreview(recorded);
         }
         catch (RecordingException ex)
         {
-            statusLabel.Text = $"Export failed: {ex.Message}";
-            MessageBox.Show(this, $"Could not export the animation:\n{ex.Message}", AppName,
+            statusLabel.Text = $"Recording failed: {ex.Message}";
+            MessageBox.Show(this, $"Could not record the animation:\n{ex.Message}", AppName,
+                MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            _pendingReply = null;
+            SetBusy(false, statusText: null);
+        }
+    }
+
+    /// <summary>Writes the previewed recording as a .png sprite sheet plus a matching .anim.</summary>
+    private async Task SaveAnimationAsync()
+    {
+        if (!IsPreviewingAnimation) return;
+
+        saveAnimationDialog.FileName = EffectName + ".png";
+        if (saveAnimationDialog.ShowDialog(this) != DialogResult.OK) return;
+
+        var pngPath = saveAnimationDialog.FileName;
+        SetBusy(true, "Saving...");
+        try
+        {
+            await RequestAsync($"save {pngPath}");
+            statusLabel.Text = $"Saved {Path.GetFileName(pngPath)} + {Path.GetFileNameWithoutExtension(pngPath)}.anim";
+        }
+        catch (RecordingException ex)
+        {
+            statusLabel.Text = $"Save failed: {ex.Message}";
+            MessageBox.Show(this, $"Could not save the animation:\n{ex.Message}", AppName,
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         finally
@@ -296,13 +343,95 @@ public sealed partial class MainForm : Form
     private void SetBusy(bool busy, string? statusText)
     {
         UseWaitCursor = busy;
-        menuStrip.Enabled = propertyGrid.Enabled = !busy;
+        menuStrip.Enabled = propertyGrid.Enabled = previewPanel.Enabled = !busy;
         if (statusText != null) statusLabel.Text = statusText;
+    }
+
+    // ---- Animation preview ----
+
+    private void ShowPreview(RecordingResult recorded)
+    {
+        frameTrackBar.Maximum = recorded.Frames - 1;
+        ShowPlaybackPosition(frame: 0, isPlaying: true);
+        previewPanel.Visible = IsPreviewingAnimation = true;
+        saveAnimationMenuItem.Enabled = true;
+        particleCountLabel.Visible = false;
+
+        // A new recording starts with the native defaults; keep the viewer's choices.
+        SendPreviewBackground();
+        SendPreviewZoom();
+
+        statusLabel.Text = $"Recorded {recorded.Frames} frames of {recorded.FrameWidth}×{recorded.FrameHeight} " +
+            $"(sheet {recorded.SheetWidth}×{recorded.SheetHeight}). Save it, record again, or go back to the editor.";
+    }
+
+    private void ClosePreview()
+    {
+        if (!IsPreviewingAnimation) return;
+
+        viewport.Post("close");
+        previewPanel.Visible = IsPreviewingAnimation = false;
+        saveAnimationMenuItem.Enabled = false;
+        particleCountLabel.Visible = true;
+        statusLabel.Text = "Editing";
+    }
+
+    private void backButton_Click(object? sender, EventArgs e) => ClosePreview();
+
+    private void playButton_Click(object? sender, EventArgs e) =>
+        viewport.Post(playButton.Text == "Play" ? "preview play" : "preview pause");
+
+    private void previousFrameButton_Click(object? sender, EventArgs e) => StepFrame(-1);
+
+    private void nextFrameButton_Click(object? sender, EventArgs e) => StepFrame(1);
+
+    private void frameTrackBar_Scroll(object? sender, EventArgs e) => viewport.Post($"preview frame {frameTrackBar.Value}");
+
+    private void backgroundComboBox_SelectedIndexChanged(object? sender, EventArgs e) => SendPreviewBackground();
+
+    private void zoomComboBox_SelectedIndexChanged(object? sender, EventArgs e) => SendPreviewZoom();
+
+    private void StepFrame(int offset)
+    {
+        var frame = Math.Clamp(frameTrackBar.Value + offset, 0, frameTrackBar.Maximum);
+        viewport.Post("preview pause");
+        viewport.Post($"preview frame {frame}");
+    }
+
+    private void SendPreviewBackground()
+    {
+        if (!IsPreviewingAnimation) return;
+
+        string[] backgrounds = ["dark", "light", "checker"];
+        viewport.Post($"preview background {backgrounds[Math.Max(0, backgroundComboBox.SelectedIndex)]}");
+    }
+
+    private void SendPreviewZoom()
+    {
+        if (!IsPreviewingAnimation) return;
+
+        int[] zooms = [0, 1, 2, 4];   // 0 = fit
+        viewport.Post($"preview zoom {zooms[Math.Max(0, zoomComboBox.SelectedIndex)]}");
+    }
+
+    /// <summary>Handles a "frame &lt;index&gt; &lt;playing&gt;" message from the preview.</summary>
+    private void ShowPlaybackPosition(string argument)
+    {
+        var parts = argument.Split(' ');
+        if (parts.Length == 2 && int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out var frame))
+            ShowPlaybackPosition(frame, isPlaying: parts[1] == "1");
+    }
+
+    private void ShowPlaybackPosition(int frame, bool isPlaying)
+    {
+        frameTrackBar.Value = Math.Clamp(frame, 0, frameTrackBar.Maximum);
+        frameLabel.Text = $"Frame {frameTrackBar.Value + 1} / {frameTrackBar.Maximum + 1}";
+        playButton.Text = isPlaying ? "Pause" : "Play";
     }
 
     private sealed class RecordingException(string message) : Exception(message);
 
-    /// <summary>A "measured"/"exported" reply: frames, frame size and sheet size.</summary>
+    /// <summary>A "measured"/"recorded" reply: frames, frame size and sheet size.</summary>
     private readonly record struct RecordingResult(int Frames, int FrameWidth, int FrameHeight, int SheetWidth, int SheetHeight)
     {
         public static RecordingResult Parse(string reply)

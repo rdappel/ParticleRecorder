@@ -3,6 +3,7 @@
 #include "pch.h"
 #include "Particles/ParticleSettings.h"
 #include "Particles/PreviewEffect.h"
+#include "Recording/Recorder.h"
 
 using namespace KatanaEngine;
 
@@ -18,9 +19,11 @@ public:
 	bool ApplySetting(const std::string& name, const std::string& value, std::string& error);
 	void Restart();
 
-	// Handles a "measure" or "export" request (optionsText is its key=value list).
-	// On success reply is the message to send back ("measured ..." or "exported ...").
-	bool Record(bool exportFiles, const std::string& optionsText, std::string& reply, std::string& error);
+	// optionsText is a recording's key=value list (see ParseRecordingOptions).
+	bool Measure(const std::string& optionsText, RecordingLayout& layout, std::string& error) const;
+
+	// Records the current effect into memory; nullptr on failure.
+	std::unique_ptr<Recording> Record(const std::string& optionsText, std::string& error) const;
 
 	int GetActiveParticleCount() const { return m_effect.GetActiveParticleCount(); }
 

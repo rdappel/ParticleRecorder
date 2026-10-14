@@ -2,7 +2,6 @@
 #include "Recorder.h"
 
 #include "Particles/PreviewEffect.h"
-#include "Core/Resource/Image.h"
 #include "Core/Resource/RenderTarget.h"
 
 #include <cfloat>
@@ -105,12 +104,6 @@ bool ParseRecordingOptions(const std::string& text, RecordingOptions& options, s
 		if (equals == std::string::npos) break;
 
 		const std::string key = text.substr(position, equals - position);
-		if (key == "path")
-		{
-			options.Path = text.substr(equals + 1);
-			break;
-		}
-
 		const size_t end = std::min(text.find(' ', equals), text.size());
 		std::istringstream value(text.substr(equals + 1, end - equals - 1));
 		position = end + 1;
@@ -192,14 +185,13 @@ bool Recorder::Measure(const RecordingOptions& options, RecordingLayout& layout,
 	return true;
 }
 
-bool Recorder::Export(const RecordingOptions& options, RecordingLayout& layout, std::string& error) const
+bool Recorder::Record(const RecordingOptions& options, Recording& recording, std::string& error) const
 {
-	if (options.Path.empty())
-	{
-		error = "no export path given";
-		return false;
-	}
+	RecordingLayout& layout = recording.Layout;
 	if (!Measure(options, layout, error)) return false;
+
+	recording.Options = options;
+	recording.Blend = m_settings.Blend;
 
 	auto frame = std::make_shared<RenderTarget>();
 	if (!frame->Create(layout.FrameWidth, layout.FrameHeight))
@@ -209,8 +201,7 @@ bool Recorder::Export(const RecordingOptions& options, RecordingLayout& layout, 
 		return false;
 	}
 
-	Image sheet;
-	if (!sheet.Create(layout.GetSheetWidth(), layout.GetSheetHeight()))
+	if (!recording.Sheet.Create(layout.GetSheetWidth(), layout.GetSheetHeight()))
 	{
 		error = "not enough memory for a " + std::to_string(layout.GetSheetWidth()) + "x"
 			+ std::to_string(layout.GetSheetHeight()) + " sprite sheet";
@@ -228,18 +219,28 @@ bool Recorder::Export(const RecordingOptions& options, RecordingLayout& layout, 
 		simulation.GetEffect().Draw(spriteBatch, layout.Origin);
 		frame->End();
 
-		sheet.CopyFrom(*frame, (index % layout.Columns) * layout.FrameWidth, (index / layout.Columns) * layout.FrameHeight);
+		recording.Sheet.CopyFrom(*frame, layout.GetFrameX(index), layout.GetFrameY(index));
 	}
+	return true;
+}
 
-	if (!sheet.Save(options.Path))
+bool Recording::Save(const std::string& pngPath, std::string& error) const
+{
+	if (pngPath.empty())
 	{
-		error = "could not save " + options.Path;
+		error = "no file name given";
 		return false;
 	}
 
-	if (!WriteAnimationFile(std::filesystem::u8path(options.Path), options, layout))
+	if (!Sheet.Save(pngPath))
 	{
-		error = "could not write the .anim file next to " + options.Path;
+		error = "could not save " + pngPath;
+		return false;
+	}
+
+	if (!WriteAnimationFile(std::filesystem::u8path(pngPath), Options, Layout))
+	{
+		error = "could not write the .anim file next to " + pngPath;
 		return false;
 	}
 	return true;

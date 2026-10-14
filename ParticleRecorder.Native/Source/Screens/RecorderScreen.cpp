@@ -2,7 +2,6 @@
 #include "RecorderScreen.h"
 
 #include "Core/Resource/Texture.h"
-#include "Recording/Recorder.h"
 
 RecorderScreen::RecorderScreen()
 	: m_effect(m_settings)
@@ -44,30 +43,22 @@ void RecorderScreen::Restart()
 	m_effect.Rebuild();
 }
 
-bool RecorderScreen::Record(bool exportFiles, const std::string& optionsText, std::string& reply, std::string& error)
+bool RecorderScreen::Measure(const std::string& optionsText, RecordingLayout& layout, std::string& error) const
 {
 	RecordingOptions options;
 	if (!ParseRecordingOptions(optionsText, options, error)) return false;
 
-	const Recorder recorder(m_settings, m_effect.GetTexture());
-	RecordingLayout layout;
+	return Recorder(m_settings, m_effect.GetTexture()).Measure(options, layout, error);
+}
 
-	if (exportFiles)
-	{
-		if (!recorder.Export(options, layout, error)) return false;
+std::unique_ptr<Recording> RecorderScreen::Record(const std::string& optionsText, std::string& error) const
+{
+	RecordingOptions options;
+	if (!ParseRecordingOptions(optionsText, options, error)) return nullptr;
 
-		reply = "exported " + std::to_string(layout.FrameCount) + " " + std::to_string(layout.FrameWidth) + " "
-			+ std::to_string(layout.FrameHeight) + " " + std::to_string(layout.GetSheetWidth()) + " "
-			+ std::to_string(layout.GetSheetHeight());
-		return true;
-	}
-
-	if (!recorder.Measure(options, layout, error)) return false;
-
-	reply = "measured " + std::to_string(layout.FrameCount) + " " + std::to_string(layout.FrameWidth) + " "
-		+ std::to_string(layout.FrameHeight) + " " + std::to_string(layout.GetSheetWidth()) + " "
-		+ std::to_string(layout.GetSheetHeight());
-	return true;
+	auto recording = std::make_unique<Recording>();
+	if (!Recorder(m_settings, m_effect.GetTexture()).Record(options, *recording, error)) return nullptr;
+	return recording;
 }
 
 void RecorderScreen::Update(const GameTime& gameTime)

@@ -38,7 +38,8 @@ namespace ParticleRecorder
             saveMenuItem = new ToolStripMenuItem();
             saveAsMenuItem = new ToolStripMenuItem();
             fileSeparator1 = new ToolStripSeparator();
-            exportMenuItem = new ToolStripMenuItem();
+            recordMenuItem = new ToolStripMenuItem();
+            saveAnimationMenuItem = new ToolStripMenuItem();
             fileSeparator2 = new ToolStripSeparator();
             exitMenuItem = new ToolStripMenuItem();
             editMenu = new ToolStripMenuItem();
@@ -56,9 +57,24 @@ namespace ParticleRecorder
             openTextureDialog = new OpenFileDialog();
             openEffectDialog = new OpenFileDialog();
             saveEffectDialog = new SaveFileDialog();
-            exportDialog = new SaveFileDialog();
+            saveAnimationDialog = new SaveFileDialog();
+            previewPanel = new Panel();
+            backButton = new Button();
+            playButton = new Button();
+            previousFrameButton = new Button();
+            nextFrameButton = new Button();
+            frameTrackBar = new TrackBar();
+            frameLabel = new Label();
+            backgroundLabel = new Label();
+            backgroundComboBox = new ComboBox();
+            zoomLabel = new Label();
+            zoomComboBox = new ComboBox();
+            recordAgainButton = new Button();
+            savePreviewButton = new Button();
             menuStrip.SuspendLayout();
             statusStrip.SuspendLayout();
+            previewPanel.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)frameTrackBar).BeginInit();
             SuspendLayout();
             //
             // propertyGrid
@@ -99,7 +115,7 @@ namespace ParticleRecorder
             //
             // fileMenu
             //
-            fileMenu.DropDownItems.AddRange(new ToolStripItem[] { newMenuItem, openMenuItem, saveMenuItem, saveAsMenuItem, fileSeparator1, exportMenuItem, fileSeparator2, exitMenuItem });
+            fileMenu.DropDownItems.AddRange(new ToolStripItem[] { newMenuItem, openMenuItem, saveMenuItem, saveAsMenuItem, fileSeparator1, recordMenuItem, saveAnimationMenuItem, fileSeparator2, exitMenuItem });
             fileMenu.Name = "fileMenu";
             fileMenu.Size = new Size(37, 20);
             fileMenu.Text = "&File";
@@ -141,13 +157,22 @@ namespace ParticleRecorder
             fileSeparator1.Name = "fileSeparator1";
             fileSeparator1.Size = new Size(237, 6);
             //
-            // exportMenuItem
+            // recordMenuItem
             //
-            exportMenuItem.Name = "exportMenuItem";
-            exportMenuItem.ShortcutKeys = Keys.Control | Keys.E;
-            exportMenuItem.Size = new Size(240, 22);
-            exportMenuItem.Text = "&Export Animation...";
-            exportMenuItem.Click += exportMenuItem_Click;
+            recordMenuItem.Name = "recordMenuItem";
+            recordMenuItem.ShortcutKeys = Keys.Control | Keys.R;
+            recordMenuItem.Size = new Size(240, 22);
+            recordMenuItem.Text = "&Record Animation";
+            recordMenuItem.Click += recordMenuItem_Click;
+            //
+            // saveAnimationMenuItem
+            //
+            saveAnimationMenuItem.Enabled = false;
+            saveAnimationMenuItem.Name = "saveAnimationMenuItem";
+            saveAnimationMenuItem.ShortcutKeys = Keys.Control | Keys.E;
+            saveAnimationMenuItem.Size = new Size(240, 22);
+            saveAnimationMenuItem.Text = "Save &Animation...";
+            saveAnimationMenuItem.Click += saveAnimationMenuItem_Click;
             //
             // fileSeparator2
             //
@@ -261,11 +286,157 @@ namespace ParticleRecorder
             saveEffectDialog.Filter = "Particle effects (*.keparticle)|*.keparticle";
             saveEffectDialog.Title = "Save Effect";
             //
-            // exportDialog
+            // saveAnimationDialog
             //
-            exportDialog.DefaultExt = "png";
-            exportDialog.Filter = "Sprite sheet (*.png)|*.png";
-            exportDialog.Title = "Export Animation (writes the .png and a matching .anim)";
+            saveAnimationDialog.DefaultExt = "png";
+            saveAnimationDialog.Filter = "Sprite sheet (*.png)|*.png";
+            saveAnimationDialog.Title = "Save Animation (writes the .png and a matching .anim)";
+            //
+            // previewPanel
+            //
+            previewPanel.Controls.Add(backButton);
+            previewPanel.Controls.Add(playButton);
+            previewPanel.Controls.Add(previousFrameButton);
+            previewPanel.Controls.Add(nextFrameButton);
+            previewPanel.Controls.Add(frameTrackBar);
+            previewPanel.Controls.Add(frameLabel);
+            previewPanel.Controls.Add(backgroundLabel);
+            previewPanel.Controls.Add(backgroundComboBox);
+            previewPanel.Controls.Add(zoomLabel);
+            previewPanel.Controls.Add(zoomComboBox);
+            previewPanel.Controls.Add(recordAgainButton);
+            previewPanel.Controls.Add(savePreviewButton);
+            previewPanel.Dock = DockStyle.Top;
+            previewPanel.Location = new Point(343, 24);
+            previewPanel.Name = "previewPanel";
+            previewPanel.Size = new Size(1057, 38);
+            previewPanel.TabIndex = 5;
+            previewPanel.Visible = false;
+            //
+            // backButton
+            //
+            backButton.Location = new Point(6, 6);
+            backButton.Name = "backButton";
+            backButton.Size = new Size(110, 26);
+            backButton.TabIndex = 0;
+            backButton.Text = "Back to Editor";
+            backButton.UseVisualStyleBackColor = true;
+            backButton.Click += backButton_Click;
+            //
+            // playButton
+            //
+            playButton.Location = new Point(124, 6);
+            playButton.Name = "playButton";
+            playButton.Size = new Size(64, 26);
+            playButton.TabIndex = 1;
+            playButton.Text = "Pause";
+            playButton.UseVisualStyleBackColor = true;
+            playButton.Click += playButton_Click;
+            //
+            // previousFrameButton
+            //
+            previousFrameButton.Location = new Point(192, 6);
+            previousFrameButton.Name = "previousFrameButton";
+            previousFrameButton.Size = new Size(30, 26);
+            previousFrameButton.TabIndex = 2;
+            previousFrameButton.Text = "◀";
+            previousFrameButton.UseVisualStyleBackColor = true;
+            previousFrameButton.Click += previousFrameButton_Click;
+            //
+            // nextFrameButton
+            //
+            nextFrameButton.Location = new Point(224, 6);
+            nextFrameButton.Name = "nextFrameButton";
+            nextFrameButton.Size = new Size(30, 26);
+            nextFrameButton.TabIndex = 3;
+            nextFrameButton.Text = "▶";
+            nextFrameButton.UseVisualStyleBackColor = true;
+            nextFrameButton.Click += nextFrameButton_Click;
+            //
+            // frameTrackBar
+            //
+            frameTrackBar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            frameTrackBar.AutoSize = false;
+            frameTrackBar.Location = new Point(260, 7);
+            frameTrackBar.Maximum = 0;
+            frameTrackBar.Name = "frameTrackBar";
+            frameTrackBar.Size = new Size(190, 26);
+            frameTrackBar.TabIndex = 4;
+            frameTrackBar.TickStyle = TickStyle.None;
+            frameTrackBar.Scroll += frameTrackBar_Scroll;
+            //
+            // frameLabel
+            //
+            frameLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            frameLabel.Location = new Point(455, 11);
+            frameLabel.Name = "frameLabel";
+            frameLabel.Size = new Size(96, 15);
+            frameLabel.TabIndex = 5;
+            frameLabel.Text = "Frame 1 / 1";
+            //
+            // backgroundLabel
+            //
+            backgroundLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            backgroundLabel.AutoSize = true;
+            backgroundLabel.Location = new Point(557, 11);
+            backgroundLabel.Name = "backgroundLabel";
+            backgroundLabel.Size = new Size(71, 15);
+            backgroundLabel.TabIndex = 6;
+            backgroundLabel.Text = "Background";
+            //
+            // backgroundComboBox
+            //
+            backgroundComboBox.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            backgroundComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            backgroundComboBox.Items.AddRange(new object[] { "Dark", "Light", "Checkerboard" });
+            backgroundComboBox.Location = new Point(631, 7);
+            backgroundComboBox.Name = "backgroundComboBox";
+            backgroundComboBox.Size = new Size(100, 23);
+            backgroundComboBox.TabIndex = 7;
+            backgroundComboBox.SelectedIndexChanged += backgroundComboBox_SelectedIndexChanged;
+            //
+            // zoomLabel
+            //
+            zoomLabel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            zoomLabel.AutoSize = true;
+            zoomLabel.Location = new Point(739, 11);
+            zoomLabel.Name = "zoomLabel";
+            zoomLabel.Size = new Size(39, 15);
+            zoomLabel.TabIndex = 8;
+            zoomLabel.Text = "Zoom";
+            //
+            // zoomComboBox
+            //
+            zoomComboBox.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            zoomComboBox.DropDownStyle = ComboBoxStyle.DropDownList;
+            zoomComboBox.Items.AddRange(new object[] { "Fit", "100%", "200%", "400%" });
+            zoomComboBox.Location = new Point(781, 7);
+            zoomComboBox.Name = "zoomComboBox";
+            zoomComboBox.Size = new Size(66, 23);
+            zoomComboBox.TabIndex = 9;
+            zoomComboBox.SelectedIndexChanged += zoomComboBox_SelectedIndexChanged;
+            //
+            // recordAgainButton
+            //
+            recordAgainButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            recordAgainButton.Location = new Point(855, 6);
+            recordAgainButton.Name = "recordAgainButton";
+            recordAgainButton.Size = new Size(100, 26);
+            recordAgainButton.TabIndex = 10;
+            recordAgainButton.Text = "Record Again";
+            recordAgainButton.UseVisualStyleBackColor = true;
+            recordAgainButton.Click += recordMenuItem_Click;
+            //
+            // savePreviewButton
+            //
+            savePreviewButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            savePreviewButton.Location = new Point(961, 6);
+            savePreviewButton.Name = "savePreviewButton";
+            savePreviewButton.Size = new Size(90, 26);
+            savePreviewButton.TabIndex = 11;
+            savePreviewButton.Text = "Save...";
+            savePreviewButton.UseVisualStyleBackColor = true;
+            savePreviewButton.Click += saveAnimationMenuItem_Click;
             //
             // MainForm
             //
@@ -273,6 +444,7 @@ namespace ParticleRecorder
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1400, 850);
             Controls.Add(viewport);
+            Controls.Add(previewPanel);
             Controls.Add(splitter);
             Controls.Add(propertyGrid);
             Controls.Add(menuStrip);
@@ -286,6 +458,9 @@ namespace ParticleRecorder
             menuStrip.PerformLayout();
             statusStrip.ResumeLayout(false);
             statusStrip.PerformLayout();
+            previewPanel.ResumeLayout(false);
+            previewPanel.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)frameTrackBar).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -302,7 +477,8 @@ namespace ParticleRecorder
         private ToolStripMenuItem saveMenuItem;
         private ToolStripMenuItem saveAsMenuItem;
         private ToolStripSeparator fileSeparator1;
-        private ToolStripMenuItem exportMenuItem;
+        private ToolStripMenuItem recordMenuItem;
+        private ToolStripMenuItem saveAnimationMenuItem;
         private ToolStripSeparator fileSeparator2;
         private ToolStripMenuItem exitMenuItem;
         private ToolStripMenuItem editMenu;
@@ -320,6 +496,19 @@ namespace ParticleRecorder
         private OpenFileDialog openTextureDialog;
         private OpenFileDialog openEffectDialog;
         private SaveFileDialog saveEffectDialog;
-        private SaveFileDialog exportDialog;
+        private SaveFileDialog saveAnimationDialog;
+        private Panel previewPanel;
+        private Button backButton;
+        private Button playButton;
+        private Button previousFrameButton;
+        private Button nextFrameButton;
+        private TrackBar frameTrackBar;
+        private Label frameLabel;
+        private Label backgroundLabel;
+        private ComboBox backgroundComboBox;
+        private Label zoomLabel;
+        private ComboBox zoomComboBox;
+        private Button recordAgainButton;
+        private Button savePreviewButton;
     }
 }

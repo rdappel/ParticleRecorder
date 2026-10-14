@@ -99,6 +99,7 @@
     <ClCompile Include="Source\Particles\ParticleSettings.cpp" />
     <ClCompile Include="Source\Particles\PreviewEffect.cpp" />
     <ClCompile Include="Source\Recording\Recorder.cpp" />
+    <ClCompile Include="Source\Screens\AnimationPreviewScreen.cpp" />
     <ClCompile Include="Source\Screens\RecorderScreen.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -107,6 +108,7 @@
     <ClInclude Include="Source\Particles\ParticleSettings.h" />
     <ClInclude Include="Source\Particles\PreviewEffect.h" />
     <ClInclude Include="Source\Recording\Recorder.h" />
+    <ClInclude Include="Source\Screens\AnimationPreviewScreen.h" />
     <ClInclude Include="Source\Screens\RecorderScreen.h" />
   </ItemGroup>
   <ItemGroup>
