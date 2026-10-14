@@ -97,7 +97,7 @@ void PreviewEffect::Rebuild()
 {
 	EmitterConfig config;
 	config.MaxParticles = m_settings.MaxParticles;
-	config.EmissionRate = m_settings.EmissionRate;
+	config.EmissionRate = 0.0f;	// emitted by Update, which moves the emitter as it goes
 	config.IsLooping = true;
 	config.Blend = m_settings.Blend;
 
@@ -106,6 +106,7 @@ void PreviewEffect::Rebuild()
 	m_emitter->AddUpdater(std::make_shared<SettingsUpdater>(m_settings));
 	m_emitter->SetDrawer(CreateDrawer());
 	m_emitter->SetPosition(m_position);
+	m_emissionAccumulator = 0.0;
 }
 
 void PreviewEffect::SetTexture(std::shared_ptr<Texture> texture)
@@ -128,6 +129,22 @@ void PreviewEffect::SetPosition(const Vector2& position)
 
 void PreviewEffect::Update(const GameTime& gameTime)
 {
+	Update(gameTime, m_position, m_position, 1.0f);
+}
+
+void PreviewEffect::Update(const GameTime& gameTime, const Vector2& from, const Vector2& to, float rateScale)
+{
+	m_emissionAccumulator += static_cast<double>(m_settings.EmissionRate) * std::max(0.0f, rateScale) * gameTime.ElapsedTime;
+	const int count = static_cast<int>(m_emissionAccumulator);
+	m_emissionAccumulator -= count;
+
+	for (int index = 1; index <= count; ++index)
+	{
+		m_emitter->SetPosition(from + (to - from) * (static_cast<float>(index) / count));
+		m_emitter->Emit(1);
+	}
+
+	SetPosition(to);
 	m_emitter->Update(gameTime);
 }
 

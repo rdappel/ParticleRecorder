@@ -12,6 +12,7 @@ ParticleRecorderGame::ParticleRecorderGame(const GameConfig& config)
 void ParticleRecorderGame::LoadContent(ResourceManager& resourceManager)
 {
 	m_recorderScreen = std::make_shared<RecorderScreen>();
+	m_recorderScreen->SetMessageSender([this](const std::string& message) { SendHostMessage(message); });
 	m_screenManager.AddScreen(m_recorderScreen);
 
 	SendHostMessage("ready");
@@ -56,6 +57,7 @@ void ParticleRecorderGame::OnHostMessage(const std::string& message)
 	}
 
 	if (HandleRecordingMessage(message)) return;
+	if (HandlePathMessage(message)) return;
 
 	const std::string setPrefix = "set ";
 	if (message.compare(0, setPrefix.size(), setPrefix) == 0)
@@ -175,4 +177,30 @@ void ParticleRecorderGame::ClosePreview()
 	m_screenManager.RemoveScreen(m_previewScreen);
 	m_previewScreen.reset();
 	m_sentFrame = -1;
+}
+
+// Returns false if message isn't a path message.
+bool ParticleRecorderGame::HandlePathMessage(const std::string& message)
+{
+	if (StartsWith(message, "duration "))
+	{
+		const float seconds = static_cast<float>(std::atof(message.c_str() + 9));
+		if (seconds > 0.0f) m_recorderScreen->SetPathDuration(seconds);
+		else SendHostMessage("error invalid duration: " + message.substr(9));
+		return true;
+	}
+
+	if (message == "pen on" || message == "pen off")
+	{
+		m_recorderScreen->SetPenMode(message == "pen on");
+		return true;
+	}
+
+	if (StartsWith(message, "pen select "))
+	{
+		m_recorderScreen->SetSelectedPoint(std::atoi(message.c_str() + 11));
+		return true;
+	}
+
+	return false;
 }

@@ -190,7 +190,7 @@ namespace ParticleRecorder
             canvasNoteLabel.Name = "canvasNoteLabel";
             canvasNoteLabel.Size = new Size(278, 34);
             canvasNoteLabel.TabIndex = 13;
-            canvasNoteLabel.Text = "The canvas is sized automatically to fit every particle in the animation.";
+            canvasNoteLabel.Text = "The canvas fits every particle automatically, wherever the emitter path goes.";
             //
             // okButton
             //

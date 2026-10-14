@@ -86,7 +86,16 @@ public sealed class ParticleSettings
     [Category("Appearance"), Description("Opacity when a particle dies (0-255).")]
     public int EndAlpha { get; set; } = 0;
 
-    public ParticleSettings Clone() => (ParticleSettings)MemberwiseClone();
+    /// <summary>The path the emitter follows (edited with the pen tool, not in the grid). Empty = it stays at the origin.</summary>
+    [Browsable(false)]
+    public EmitterPath Path { get; set; } = new();
+
+    public ParticleSettings Clone()
+    {
+        var clone = (ParticleSettings)MemberwiseClone();
+        clone.Path = Path.Clone();
+        return clone;
+    }
 
     /// <summary>Every setting as a "set" message, e.g. to initialise the native preview.</summary>
     public IEnumerable<string> ToMessages() =>
@@ -94,6 +103,7 @@ public sealed class ParticleSettings
             .Cast<PropertyDescriptor>()
             .Select(property => ToMessage(property.Name))
             .OfType<string>()
+            .Append($"set Path {Path.ToMessageValue()}")
             .Distinct();
 
     /// <summary>The "set" message for a changed property, or null if it has no native counterpart.</summary>
@@ -104,6 +114,7 @@ public sealed class ParticleSettings
         nameof(MaxParticles) => $"set MaxParticles {MaxParticles}",
         nameof(Texture) => $"set Texture {Texture}",
         nameof(Blend) => $"set Blend {Blend}",
+        nameof(Path) => $"set Path {Path.ToMessageValue()}",
         _ => FormatFloatSetting(propertyName),
     };
 

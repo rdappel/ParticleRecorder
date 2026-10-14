@@ -12,6 +12,9 @@ class AnimationPreviewScreen;
 // Host -> game messages:
 //     set <Name> <value>    change a ParticleSettings value (see ParticleSettings.h)
 //     restart               restart the preview effect
+//     duration <seconds>    how long the live emitter takes to cover its path
+//     pen on | off          path editing: forward the mouse, draw points and handles
+//     pen select <index>    highlight a path point (-1 = none)
 //     measure <options>     fit a recording to the effect (options: see ParseRecordingOptions)
 //     record <options>      record into memory and show the animation preview
 //     preview play | pause | loop 0|1 | frame <index> | background dark|light|checker | zoom <scale, 0 = fit>
@@ -24,6 +27,8 @@ class AnimationPreviewScreen;
 //     recorded <frames> <frameW> <frameH> <sheetW> <sheetH>
 //     frame <index> <playing 0|1>   the animation preview's position, whenever it changes
 //     saved                 the files were written
+//     mouse down|up <x> <y> left|right, mouse move <x> <y>
+//                           pen mode only, in effect space (moves only while a button is held)
 //     error <text>          a message could not be applied
 class ParticleRecorderGame : public Game
 {
@@ -44,6 +49,7 @@ private:
 
 	bool HandleRecordingMessage(const std::string& message);
 	bool HandlePreviewMessage(const std::string& command, std::string& error);
+	bool HandlePathMessage(const std::string& message);
 	void ClosePreview();
 
 	ScreenManager& m_screenManager = GetScreenManager();

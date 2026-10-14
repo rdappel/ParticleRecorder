@@ -15,20 +15,16 @@ namespace
 {
 	constexpr int MaxFrames = 10000;	// guards against typos like a 1000-second recording
 
-	// Where the emitter is at a given time (seconds; negative during prewarm).
-	// Fixed at the origin for now; a drawn emitter path will be evaluated here.
-	Vector2 EmitterPositionAt(double /* time */)
-	{
-		return Vector2::ZERO;
-	}
-
-	// One run of the effect at a fixed timestep, starting after the prewarm.
+	// One run of the effect at a fixed timestep, starting after the prewarm. The emitter
+	// follows the effect's path (if any), covering it once per Duration.
 	class Simulation
 	{
 	public:
 		Simulation(const ParticleSettings& settings, const std::shared_ptr<Texture>& texture, const RecordingOptions& options)
 			: m_effect(settings, options.Seed)
+			, m_path(settings.Path)
 			, m_step(1.0 / options.Fps)
+			, m_duration(options.Duration)
 		{
 			const int prewarmSteps = static_cast<int>(std::lround(options.Prewarm * options.Fps));
 			m_time = -prewarmSteps * m_step;
@@ -40,16 +36,25 @@ namespace
 
 		void Step()
 		{
+			const Vector2 from = EmitterPositionAt(m_time);
 			m_time += m_step;
-			m_effect.SetPosition(EmitterPositionAt(m_time));
-			m_effect.Update(GameTime(m_time, m_step));
+			m_effect.Update(GameTime(m_time, m_step), from, EmitterPositionAt(m_time), m_path.RateAt(Progress(m_time)));
 		}
 
 		PreviewEffect& GetEffect() { return m_effect; }
 
 	private:
+		// Path progress at a time (seconds; negative during prewarm). A closed path wraps,
+		// so prewarm continues around the loop; an open path waits at its start.
+		double Progress(double time) const { return time / m_duration; }
+
+		// Where the emitter is at a given time. The single place that decides it.
+		Vector2 EmitterPositionAt(double time) const { return m_path.PositionAt(Progress(time)); }
+
 		PreviewEffect m_effect;
+		const EmitterPath& m_path;
 		double m_step;
+		double m_duration;
 		double m_time = 0.0;
 	};
 

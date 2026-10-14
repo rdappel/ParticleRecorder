@@ -4,7 +4,7 @@ A desktop tool for designing particle effects with **KatanaEngine** and "recordi
 
 You tune an emitter in a WinForms editor and watch the result live in an embedded KatanaEngine viewport. Recording captures the effect frame by frame, plays it back for you to check, and saves a PNG sprite sheet plus an `AnimationSet` file. A game then plays the effect as a cheap animation instead of simulating particles at runtime.
 
-> **Status:** early but usable: design an effect, save it, record it, preview the animation, and save it as a sprite sheet + `.anim`. A movable emitter is next (see [Roadmap](#roadmap)).
+> **Status:** early but usable: design an effect, save it, record it, preview the animation, and save it as a sprite sheet + `.anim`. The emitter can follow a path drawn with a pen tool.
 
 ## Architecture
 
@@ -31,8 +31,11 @@ All messages are UTF-8 strings. Values use the invariant culture.
 
 | Direction | Message | Meaning |
 |---|---|---|
-| UI → game | `set <Name> <value>` | Change one `ParticleSettings` value. Colors are `r,g,b,a` (0–255). `Blend` is `Alpha` or `Additive`. `Texture` is an absolute image path, or empty for circles. |
+| UI → game | `set <Name> <value>` | Change one `ParticleSettings` value. Colors are `r,g,b,a` (0–255). `Blend` is `Alpha` or `Additive`. `Texture` is an absolute image path, or empty for circles. `Path` is `<closed 0\|1> x,y,inX,inY,outX,outY,rate;...` (handles are offsets from the point, rate is %); empty after the flag = no path. |
 | UI → game | `restart` | Restart the preview effect. |
+| UI → game | `duration <seconds>` | How long the live emitter takes to cover its path (the recording's Duration). Sent with every setting and when Recording Settings change. |
+| UI → game | `pen on` / `pen off` | Path editing: forward the mouse to the UI, draw points and handles. |
+| UI → game | `pen select <index>` | Highlight a path point (`-1` = none). |
 | UI → game | `measure <options>` | Simulate a recording and fit the canvas to it. Options are `key=value` pairs: `seed`, `fps`, `duration`, `prewarm` (seconds, 0 = off), `padding`, `columns` (0 = auto), `loop` (0/1). |
 | UI → game | `record <options>` | Record into memory (same options as `measure`) and show the animation preview over the live effect. Replaces any previous recording. |
 | UI → game | `preview play` / `preview pause` | Start or stop playback. Playing after playback has finished starts it again. |
@@ -44,6 +47,7 @@ All messages are UTF-8 strings. Values use the invariant culture.
 | UI → game | `close` | Close the animation preview and show the live effect again. |
 | game → UI | `ready` | Preview loaded. The UI responds by sending every setting. |
 | game → UI | `stats <active>` | Active particle count, a few times per second. |
+| game → UI | `mouse down\|up <x> <y> left\|right`, `mouse move <x> <y>` | Pen mode only: mouse input on the viewport, in effect space (pixels from the emitter's resting point). Moves are sent only while a button is held. |
 | game → UI | `measured <frames> <frameW> <frameH> <sheetW> <sheetH>` | Reply to `measure`. |
 | game → UI | `recorded <frames> <frameW> <frameH> <sheetW> <sheetH>` | Reply to `record`: the preview is showing. |
 | game → UI | `frame <index> <playing>` | The preview's frame and whether it is playing (`0`/`1`), sent whenever either changes. |
@@ -77,10 +81,34 @@ KatanaEngine blends with premultiplied alpha, so soft-edged textures don't get d
 | Menu | Items |
 |---|---|
 | File | New Effect (Ctrl+N), Open Effect... (Ctrl+O), Save Effect (Ctrl+S), Save Effect As... (Ctrl+Shift+S), Record Animation (Ctrl+R), Save Animation... (Ctrl+E, while previewing), Exit |
-| Edit | Load Texture..., Clear Texture, Recording Settings... |
+| Edit | Load Texture..., Clear Texture, Recording Settings..., Emitter Path (Ctrl+P) |
 | View | Restart Preview (F5; while previewing a recording, plays it from the start), Settings Panel (show/hide the grid) |
 
 The title bar shows the effect's name, with `*` when there are unsaved changes; New, Open and closing the window ask before discarding them.
+
+## Emitter path
+
+By default the emitter stays still. **Edit > Emitter Path** (Ctrl+P) lets you draw a path for it with a pen tool, right on the viewport; the live effect follows the path while you edit. A bar above the viewport has **Done**, **Closed (loop)**, **Clear Path**, the selected point's **rate**, and **Delete Point**.
+
+| Gesture | Does |
+|---|---|
+| Click empty space | Add a corner point at the end of the path |
+| Click and drag empty space | Add a smooth point and pull out its handles |
+| Click the path | Insert a point there (the curve keeps its shape) |
+| Click the green start point | Close the path into a loop |
+| Drag a point / a handle | Move it. A smooth point keeps its two handles in line |
+| Double-click a point | Toggle corner (sharp) / smooth |
+| Right-click a point | Delete it |
+| Click a point | Select it, to set its rate |
+
+(The viewport can't receive keyboard input, so there are no modifier keys.)
+
+- **Open path:** the emitter travels from the start point to the end once per animation. With prewarm, it waits at the start during the prewarm.
+- **Closed path:** the emitter goes round the loop once per animation, and prewarm continues round the loop, so a looping animation joins up seamlessly.
+- **Speed:** the emitter covers the path at a constant speed over the recording's **Duration** (the live view repeats it every Duration). A longer path or a shorter Duration means a faster emitter.
+- **Rate:** each point has an emission rate as a percentage of `EmissionRate` (default 100%). It blends smoothly between points along the path. The path is drawn thicker where the rate is higher; 0% stops emission there.
+- Particles emitted during one step are spread along the emitter's movement, so a fast emitter leaves an even trail.
+- The canvas still fits automatically, so it grows to cover wherever the emitter goes.
 
 ## Recording
 
@@ -122,7 +150,7 @@ The PNG has straight (non-premultiplied) alpha, as image files normally do; Kata
 
 ## Effect files
 
-**File > Save Effect** writes a `.keparticle` file: JSON with every particle setting and the recording settings. The texture path is stored relative to the effect file, so keep textures next to (or below) your effects and move them together. Settings missing from a file get their defaults, so files from older versions keep opening.
+**File > Save Effect** writes a `.keparticle` file: JSON with every particle setting (including the emitter path) and the recording settings. The texture path is stored relative to the effect file, so keep textures next to (or below) your effects and move them together. Settings missing from a file get their defaults, so files from older versions keep opening.
 
 ## Roadmap
 
@@ -133,9 +161,9 @@ The PNG has straight (non-premultiplied) alpha, as image files normally do; Kata
 - [x] Recording settings, auto-fit canvas, prewarm
 - [x] Deterministic frame capture and sprite-sheet + `.anim` export
 - [x] Animation preview before saving: playback, frame stepping, backgrounds, zoom
-- [ ] **Emitter path:** draw a path with a pen tool (a group of splines; the engine already has `Spline`), and the emitter moves along it during the animation. The recorder already takes the emitter's position from a single function (`EmitterPositionAt` in `Recorder.cpp`) for this.
+- [x] Emitter path drawn with a pen tool (open or closed), with an emission rate per point
 
-**Ideas for later:** PNG-sequence or GIF export, helpers for seamless loops, and multiple emitters per effect.
+**Ideas for later:** undo for path edits, aiming particles along the path's direction, per-point timing (slowing down or speeding up along the path), PNG-sequence or GIF export, and multiple emitters per effect.
 
 ## Building
 

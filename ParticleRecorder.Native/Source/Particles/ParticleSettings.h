@@ -1,6 +1,7 @@
 #pragma once
 
 #include "pch.h"
+#include "Paths/EmitterPath.h"
 
 using namespace KatanaEngine;
 
@@ -33,10 +34,12 @@ struct ParticleSettings
 
 	std::string Texture;			// absolute path; empty = draw circles
 	BlendState Blend = BlendState::ALPHA_BLEND;
+
+	EmitterPath Path;				// empty = the emitter stays at the origin
 };
 
 // Applies one "Name value" pair. Colors are "r,g,b,a" with 0-255 components; Blend is
-// "Alpha" or "Additive"; Texture is a file path (may be empty).
+// "Alpha" or "Additive"; Texture is a file path (may be empty); Path is described in EmitterPath::Parse.
 // Returns false for unknown names or malformed values (the settings are left unchanged).
 bool ApplySetting(ParticleSettings& settings, const std::string& name, const std::string& value);
 

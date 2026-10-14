@@ -19,7 +19,7 @@ public:
 	// The seed fixes the random sequence, so a recording can replay an effect exactly.
 	explicit PreviewEffect(const ParticleSettings& settings, unsigned int seed = std::random_device{}());
 
-	// Call after changing MaxParticles or EmissionRate (restarts the effect).
+	// Call after changing MaxParticles (restarts the effect).
 	void Rebuild();
 
 	// nullptr draws circles. Keeps the live particles.
@@ -27,7 +27,14 @@ public:
 	const std::shared_ptr<Texture>& GetTexture() const { return m_texture; }
 
 	void SetPosition(const Vector2& position);
+
+	// Advances the effect with the emitter standing still at its position.
 	void Update(const GameTime& gameTime);
+
+	// Advances the effect while the emitter moves from -> to during this step. Particles
+	// emitted in the step are spread along that movement, so a fast emitter leaves an even
+	// trail. rateScale multiplies EmissionRate (the path's rate at this point).
+	void Update(const GameTime& gameTime, const Vector2& from, const Vector2& to, float rateScale);
 	void Draw(SpriteBatch& spriteBatch);
 
 	// Draws with viewOffset subtracted from every position (e.g. to place the effect in a recording frame).
@@ -52,4 +59,5 @@ private:
 	std::shared_ptr<Texture> m_texture;
 	std::unique_ptr<ParticleEmitter<SimpleParticle>> m_emitter;
 	Vector2 m_position;
+	double m_emissionAccumulator = 0.0;	// fractional particles carried to the next step
 };

@@ -66,6 +66,8 @@ bool ApplySetting(ParticleSettings& settings, const std::string& name, const std
 		return true;
 	}
 
+	if (name == "Path") return settings.Path.Parse(value);
+
 	if (name == "Blend")
 	{
 		if (value == "Alpha") settings.Blend = BlendState::ALPHA_BLEND;
@@ -103,5 +105,5 @@ bool ApplySetting(ParticleSettings& settings, const std::string& name, const std
 
 bool RequiresEmitterRebuild(const std::string& name)
 {
-	return name == "MaxParticles" || name == "EmissionRate";
+	return name == "MaxParticles";
 }

@@ -56,8 +56,9 @@ struct Recording
 // Records an effect deterministically: the simulation advances exactly 1/fps per frame
 // with a fixed seed, independent of the live preview and of real time.
 //
-// The emitter sits at the simulation origin. EmitterPositionAt (Recorder.cpp) is the
-// single place that decides where it is at each moment; a drawn emitter path will plug in there.
+// The emitter follows the effect's path (EmitterPath), covering it once per Duration, or
+// stays at the origin without one. EmitterPositionAt (Recorder.cpp) is the single place that
+// decides where it is at each moment.
 class Recorder
 {
 public:

@@ -96,6 +96,7 @@
     </ClCompile>
     <ClCompile Include="Source\Hosting\Exports.cpp" />
     <ClCompile Include="Source\ParticleRecorderGame.cpp" />
+    <ClCompile Include="Source\Paths\EmitterPath.cpp" />
     <ClCompile Include="Source\Particles\ParticleSettings.cpp" />
     <ClCompile Include="Source\Particles\PreviewEffect.cpp" />
     <ClCompile Include="Source\Recording\Recorder.cpp" />
@@ -105,6 +106,7 @@
   <ItemGroup>
     <ClInclude Include="Source\pch.h" />
     <ClInclude Include="Source\ParticleRecorderGame.h" />
+    <ClInclude Include="Source\Paths\EmitterPath.h" />
     <ClInclude Include="Source\Particles\ParticleSettings.h" />
     <ClInclude Include="Source\Particles\PreviewEffect.h" />
     <ClInclude Include="Source\Recording\Recorder.h" />

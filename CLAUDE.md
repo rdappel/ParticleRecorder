@@ -26,13 +26,16 @@ Effect settings live in `ParticleRecorder/Effects/ParticleSettings.cs`, recordin
 `*.keparticle` is JSON written by `ParticleRecorder/Effects/EffectDocument.cs` (`version`, `particles`, `recording`; colours `#RRGGBB`; texture relative to the file). New settings get defaults when missing, so old files keep loading. Bump `CurrentVersion` only for breaking changes, and keep reading older versions.
 
 ### Recording must stay deterministic
-`ParticleRecorder.Native/Source/Recording/Recorder.cpp` simulates with a fixed `1/fps` step and the seed from the message, so a `measure` and the `record` that follows produce the same particles. Don't read real time, the live preview, or an unseeded random source while recording. `save` writes the recording held in memory (the frames the user previewed); it never re-simulates. The emitter's position comes only from `EmitterPositionAt`, where the planned emitter path plugs in.
+`ParticleRecorder.Native/Source/Recording/Recorder.cpp` simulates with a fixed `1/fps` step and the seed from the message, so a `measure` and the `record` that follows produce the same particles. Don't read real time, the live preview, or an unseeded random source while recording. `save` writes the recording held in memory (the frames the user previewed); it never re-simulates. The emitter's position comes only from `EmitterPositionAt`, which evaluates the effect's `EmitterPath` (`ParticleRecorder.Native/Source/Paths/`) over the recording's Duration.
 
 ### Keep the two ParticleSettings in sync
-Adding or renaming a setting means updating **both** `ParticleSettings.cs` and `ParticleRecorder.Native/Source/Particles/ParticleSettings.h/.cpp` (`ApplySetting`, `RequiresEmitterRebuild`). Then update the protocol table in `README.md`.
+Adding or renaming a setting means updating **both** `ParticleSettings.cs` and `ParticleRecorder.Native/Source/Particles/ParticleSettings.h/.cpp` (`ApplySetting`, `RequiresEmitterRebuild`). Then update the protocol table in `README.md`. The emitter path is part of the settings too: `Effects/EmitterPath.cs` and `Source/Paths/EmitterPath.h/.cpp` must agree on the `set Path` format.
 
 ### Messages are the only boundary
 The UI and the game talk only through `KatanaViewport.Post` / `MessageReceived` and `OnHostMessage` / `SendHostMessage`. No other exports, no shared memory. New messages must be added to the protocol table in `README.md`.
+
+### Input in the viewport
+The hosted game window receives mouse input but **not keyboard input**. Tool controls belong in the WinForms UI; viewport interaction (the pen tool) must be mouse-only. The native side only forwards mouse events (`mouse ...`); `ParticleRecorder/Paths/PenTool.cs` does the editing, so the UI keeps owning the path.
 
 ### Threading
 - `OnHostMessage` and everything in the native game run on the game thread.

@@ -1,6 +1,8 @@
 using System.Globalization;
+using System.Numerics;
 using System.Text.Json;
 using ParticleRecorder.Effects;
+using ParticleRecorder.Paths;
 
 namespace ParticleRecorder;
 
@@ -19,6 +21,10 @@ public sealed partial class MainForm : Form
     // The reply a recording request is waiting for ("measured", "recorded" or "saved", or an error).
     private TaskCompletionSource<string>? _pendingReply;
 
+    // Edits _settings.Path from the viewport's mouse messages while path editing is on.
+    private readonly PenTool _penTool = new();
+    private bool _isSyncingPathControls;
+
     public MainForm()
     {
         InitializeComponent();
@@ -28,6 +34,7 @@ public sealed partial class MainForm : Form
         openTextureDialog.Filter = ImageFileNameEditor.ImageFilter;
         backgroundComboBox.SelectedIndex = 0;
         zoomComboBox.SelectedIndex = 0;
+        _penTool.SetPath(_settings.Path);
         UpdateTitle();
     }
 
@@ -87,8 +94,11 @@ public sealed partial class MainForm : Form
         if (dialog.ShowDialog(this) != DialogResult.OK) return;
 
         _recording = dialog.Settings;
+        SendPathDuration();
         MarkDirty();
     }
+
+    private void emitterPathMenuItem_Click(object? sender, EventArgs e) => SetPathEditing(!IsEditingPath);
 
     // ---- Menu: View ----
 
@@ -147,8 +157,12 @@ public sealed partial class MainForm : Form
     private void SendAllSettings()
     {
         foreach (var setting in _settings.ToMessages()) viewport.Post(setting);
+        SendPathDuration();
         viewport.Post("restart");
     }
+
+    private void SendPathDuration() =>
+        viewport.Post(string.Create(CultureInfo.InvariantCulture, $"duration {_recording.Duration}"));
 
     private void HandleGameMessage(string message)
     {
@@ -171,6 +185,9 @@ public sealed partial class MainForm : Form
             case "frame":
                 ShowPlaybackPosition(argument);
                 break;
+            case "mouse":
+                HandlePenMouse(argument);
+                break;
             case "error" when _pendingReply != null:
                 _pendingReply.TrySetException(new RecordingException(argument));
                 break;
@@ -192,7 +209,10 @@ public sealed partial class MainForm : Form
         _isDirty = false;
 
         propertyGrid.SelectedObject = _settings;
+        _penTool.SetPath(_settings.Path);
         SendAllSettings();
+        if (IsEditingPath) viewport.Post("pen select -1");
+        SyncPathControls();
         UpdateTitle();
     }
 
@@ -267,6 +287,7 @@ public sealed partial class MainForm : Form
             return;
         }
 
+        SetPathEditing(false);
         var options = _recording.ToOptions(seed: (uint)Random.Shared.Next(1, int.MaxValue));
 
         SetBusy(true, "Measuring the animation...");
@@ -345,6 +366,108 @@ public sealed partial class MainForm : Form
         UseWaitCursor = busy;
         menuStrip.Enabled = propertyGrid.Enabled = previewPanel.Enabled = !busy;
         if (statusText != null) statusLabel.Text = statusText;
+    }
+
+    // ---- Emitter path ----
+
+    // True while the path bar is shown and the viewport's mouse edits the path.
+    private bool IsEditingPath { get; set; }
+
+    private void SetPathEditing(bool editing)
+    {
+        if (editing == IsEditingPath) return;
+
+        if (editing) ClosePreview();
+        IsEditingPath = editing;
+        pathPanel.Visible = emitterPathMenuItem.Checked = editing;
+        viewport.Post(editing ? "pen on" : "pen off");
+        viewport.Post($"pen select {_penTool.SelectedIndex}");
+        SyncPathControls();
+        statusLabel.Text = editing ? "Editing the emitter path" : "Editing";
+    }
+
+    private void doneButton_Click(object? sender, EventArgs e) => SetPathEditing(false);
+
+    private void closedPathCheckBox_CheckedChanged(object? sender, EventArgs e)
+    {
+        if (_isSyncingPathControls) return;
+
+        _settings.Path.Closed = closedPathCheckBox.Checked;
+        PathChanged();
+    }
+
+    private void clearPathButton_Click(object? sender, EventArgs e)
+    {
+        if (_penTool.Clear()) PathChanged();
+    }
+
+    private void deletePointButton_Click(object? sender, EventArgs e)
+    {
+        if (_penTool.DeleteSelected()) PathChanged();
+    }
+
+    private void pointRateInput_ValueChanged(object? sender, EventArgs e)
+    {
+        if (_isSyncingPathControls || _penTool.SelectedPoint is not { } point) return;
+
+        point.Rate = (float)pointRateInput.Value;
+        PathChanged();
+    }
+
+    /// <summary>Handles "mouse down|up x y left|right" and "mouse move x y" from the viewport.</summary>
+    private void HandlePenMouse(string argument)
+    {
+        if (!IsEditingPath) return;
+
+        var parts = argument.Split(' ');
+        if (parts.Length < 3
+            || !float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out var x)
+            || !float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out var y)) return;
+
+        var position = new Vector2(x, y);
+        var button = parts.Length > 3 && parts[3] == "right" ? MouseButtons.Right : MouseButtons.Left;
+        var selected = _penTool.SelectedIndex;
+
+        var changed = parts[0] switch
+        {
+            "down" => _penTool.MouseDown(position, button, Environment.TickCount64),
+            "move" => _penTool.MouseMove(position),
+            _ => EndDrag(),
+        };
+
+        if (changed) PathChanged();
+        else if (_penTool.SelectedIndex != selected) SyncPathSelection();
+    }
+
+    private bool EndDrag()
+    {
+        _penTool.MouseUp();
+        return false;
+    }
+
+    private void PathChanged()
+    {
+        SendSetting(nameof(ParticleSettings.Path));
+        SyncPathSelection();
+        MarkDirty();
+    }
+
+    private void SyncPathSelection()
+    {
+        viewport.Post($"pen select {_penTool.SelectedIndex}");
+        SyncPathControls();
+    }
+
+    private void SyncPathControls()
+    {
+        _isSyncingPathControls = true;
+        closedPathCheckBox.Checked = _settings.Path.Closed;
+        clearPathButton.Enabled = !_settings.Path.IsEmpty;
+
+        var point = _penTool.SelectedPoint;
+        pointRateInput.Enabled = deletePointButton.Enabled = point != null;
+        if (point != null) pointRateInput.Value = Math.Clamp((decimal)point.Rate, pointRateInput.Minimum, pointRateInput.Maximum);
+        _isSyncingPathControls = false;
     }
 
     // ---- Animation preview ----

@@ -47,6 +47,7 @@ namespace ParticleRecorder
             clearTextureMenuItem = new ToolStripMenuItem();
             editSeparator1 = new ToolStripSeparator();
             recordingSettingsMenuItem = new ToolStripMenuItem();
+            emitterPathMenuItem = new ToolStripMenuItem();
             viewMenu = new ToolStripMenuItem();
             restartPreviewMenuItem = new ToolStripMenuItem();
             viewSeparator1 = new ToolStripSeparator();
@@ -72,9 +73,19 @@ namespace ParticleRecorder
             zoomComboBox = new ComboBox();
             recordAgainButton = new Button();
             savePreviewButton = new Button();
+            pathPanel = new Panel();
+            doneButton = new Button();
+            closedPathCheckBox = new CheckBox();
+            clearPathButton = new Button();
+            pointRateLabel = new Label();
+            pointRateInput = new NumericUpDown();
+            deletePointButton = new Button();
+            pathHintLabel = new Label();
             menuStrip.SuspendLayout();
             statusStrip.SuspendLayout();
             previewPanel.SuspendLayout();
+            pathPanel.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)pointRateInput).BeginInit();
             ((System.ComponentModel.ISupportInitialize)frameTrackBar).BeginInit();
             SuspendLayout();
             //
@@ -189,7 +200,7 @@ namespace ParticleRecorder
             //
             // editMenu
             //
-            editMenu.DropDownItems.AddRange(new ToolStripItem[] { loadTextureMenuItem, clearTextureMenuItem, editSeparator1, recordingSettingsMenuItem });
+            editMenu.DropDownItems.AddRange(new ToolStripItem[] { loadTextureMenuItem, clearTextureMenuItem, editSeparator1, recordingSettingsMenuItem, emitterPathMenuItem });
             editMenu.Name = "editMenu";
             editMenu.Size = new Size(39, 20);
             editMenu.Text = "&Edit";
@@ -219,6 +230,14 @@ namespace ParticleRecorder
             recordingSettingsMenuItem.Size = new Size(190, 22);
             recordingSettingsMenuItem.Text = "&Recording Settings...";
             recordingSettingsMenuItem.Click += recordingSettingsMenuItem_Click;
+            //
+            // emitterPathMenuItem
+            //
+            emitterPathMenuItem.Name = "emitterPathMenuItem";
+            emitterPathMenuItem.ShortcutKeys = Keys.Control | Keys.P;
+            emitterPathMenuItem.Size = new Size(190, 22);
+            emitterPathMenuItem.Text = "Emitter &Path";
+            emitterPathMenuItem.Click += emitterPathMenuItem_Click;
             //
             // viewMenu
             //
@@ -451,6 +470,96 @@ namespace ParticleRecorder
             savePreviewButton.UseVisualStyleBackColor = true;
             savePreviewButton.Click += saveAnimationMenuItem_Click;
             //
+            // pathPanel
+            //
+            pathPanel.Controls.Add(doneButton);
+            pathPanel.Controls.Add(closedPathCheckBox);
+            pathPanel.Controls.Add(clearPathButton);
+            pathPanel.Controls.Add(pointRateLabel);
+            pathPanel.Controls.Add(pointRateInput);
+            pathPanel.Controls.Add(deletePointButton);
+            pathPanel.Controls.Add(pathHintLabel);
+            pathPanel.Dock = DockStyle.Top;
+            pathPanel.Location = new Point(343, 24);
+            pathPanel.Name = "pathPanel";
+            pathPanel.Size = new Size(1057, 38);
+            pathPanel.TabIndex = 6;
+            pathPanel.Visible = false;
+            //
+            // doneButton
+            //
+            doneButton.Location = new Point(6, 6);
+            doneButton.Name = "doneButton";
+            doneButton.Size = new Size(70, 26);
+            doneButton.TabIndex = 0;
+            doneButton.Text = "Done";
+            doneButton.UseVisualStyleBackColor = true;
+            doneButton.Click += doneButton_Click;
+            //
+            // closedPathCheckBox
+            //
+            closedPathCheckBox.AutoSize = true;
+            closedPathCheckBox.Location = new Point(86, 10);
+            closedPathCheckBox.Name = "closedPathCheckBox";
+            closedPathCheckBox.Size = new Size(98, 19);
+            closedPathCheckBox.TabIndex = 1;
+            closedPathCheckBox.Text = "Closed (loop)";
+            closedPathCheckBox.UseVisualStyleBackColor = true;
+            closedPathCheckBox.CheckedChanged += closedPathCheckBox_CheckedChanged;
+            //
+            // clearPathButton
+            //
+            clearPathButton.Location = new Point(192, 6);
+            clearPathButton.Name = "clearPathButton";
+            clearPathButton.Size = new Size(84, 26);
+            clearPathButton.TabIndex = 2;
+            clearPathButton.Text = "Clear Path";
+            clearPathButton.UseVisualStyleBackColor = true;
+            clearPathButton.Click += clearPathButton_Click;
+            //
+            // pointRateLabel
+            //
+            pointRateLabel.AutoSize = true;
+            pointRateLabel.Location = new Point(290, 11);
+            pointRateLabel.Name = "pointRateLabel";
+            pointRateLabel.Size = new Size(77, 15);
+            pointRateLabel.TabIndex = 3;
+            pointRateLabel.Text = "Point rate (%)";
+            //
+            // pointRateInput
+            //
+            pointRateInput.Enabled = false;
+            pointRateInput.Increment = new decimal(new int[] { 10, 0, 0, 0 });
+            pointRateInput.Location = new Point(372, 8);
+            pointRateInput.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
+            pointRateInput.Name = "pointRateInput";
+            pointRateInput.Size = new Size(60, 23);
+            pointRateInput.TabIndex = 4;
+            pointRateInput.Value = new decimal(new int[] { 100, 0, 0, 0 });
+            pointRateInput.ValueChanged += pointRateInput_ValueChanged;
+            //
+            // deletePointButton
+            //
+            deletePointButton.Enabled = false;
+            deletePointButton.Location = new Point(440, 6);
+            deletePointButton.Name = "deletePointButton";
+            deletePointButton.Size = new Size(90, 26);
+            deletePointButton.TabIndex = 5;
+            deletePointButton.Text = "Delete Point";
+            deletePointButton.UseVisualStyleBackColor = true;
+            deletePointButton.Click += deletePointButton_Click;
+            //
+            // pathHintLabel
+            //
+            pathHintLabel.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            pathHintLabel.AutoEllipsis = true;
+            pathHintLabel.ForeColor = SystemColors.GrayText;
+            pathHintLabel.Location = new Point(540, 11);
+            pathHintLabel.Name = "pathHintLabel";
+            pathHintLabel.Size = new Size(511, 15);
+            pathHintLabel.TabIndex = 6;
+            pathHintLabel.Text = "Click: add point · Drag: curve · Click green start point: close · Double-click point: corner/smooth · Right-click: delete";
+            //
             // MainForm
             //
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -458,6 +567,7 @@ namespace ParticleRecorder
             ClientSize = new Size(1400, 850);
             Controls.Add(viewport);
             Controls.Add(previewPanel);
+            Controls.Add(pathPanel);
             Controls.Add(splitter);
             Controls.Add(propertyGrid);
             Controls.Add(menuStrip);
@@ -473,6 +583,9 @@ namespace ParticleRecorder
             statusStrip.PerformLayout();
             previewPanel.ResumeLayout(false);
             previewPanel.PerformLayout();
+            ((System.ComponentModel.ISupportInitialize)pointRateInput).EndInit();
+            pathPanel.ResumeLayout(false);
+            pathPanel.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)frameTrackBar).EndInit();
             ResumeLayout(false);
             PerformLayout();
@@ -499,6 +612,7 @@ namespace ParticleRecorder
         private ToolStripMenuItem clearTextureMenuItem;
         private ToolStripSeparator editSeparator1;
         private ToolStripMenuItem recordingSettingsMenuItem;
+        private ToolStripMenuItem emitterPathMenuItem;
         private ToolStripMenuItem viewMenu;
         private ToolStripMenuItem restartPreviewMenuItem;
         private ToolStripSeparator viewSeparator1;
@@ -524,5 +638,13 @@ namespace ParticleRecorder
         private ComboBox zoomComboBox;
         private Button recordAgainButton;
         private Button savePreviewButton;
+        private Panel pathPanel;
+        private Button doneButton;
+        private CheckBox closedPathCheckBox;
+        private Button clearPathButton;
+        private Label pointRateLabel;
+        private NumericUpDown pointRateInput;
+        private Button deletePointButton;
+        private Label pathHintLabel;
     }
 }
