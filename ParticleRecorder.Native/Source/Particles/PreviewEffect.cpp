@@ -86,9 +86,9 @@ namespace
 	};
 }
 
-PreviewEffect::PreviewEffect(const ParticleSettings& settings)
+PreviewEffect::PreviewEffect(const ParticleSettings& settings, unsigned int seed)
 	: m_settings(settings)
-	, m_random(std::make_shared<std::mt19937>(std::random_device{}()))
+	, m_random(std::make_shared<std::mt19937>(seed))
 {
 	Rebuild();
 }
@@ -135,6 +135,24 @@ void PreviewEffect::Draw(SpriteBatch& spriteBatch)
 {
 	m_emitter->SetBlendState(m_settings.Blend);
 	m_emitter->DrawBatch(spriteBatch);
+}
+
+void PreviewEffect::Draw(SpriteBatch& spriteBatch, const Vector2& viewOffset)
+{
+	spriteBatch.Begin(SpriteSortMode::DEFERRED, m_settings.Blend, nullptr, viewOffset);
+	m_emitter->Draw(spriteBatch);
+	spriteBatch.End();
+}
+
+float PreviewEffect::GetParticleRadius(float scale) const
+{
+	const float radius = scale * 0.5f;
+	if (!m_texture || !m_texture->IsValid()) return radius;
+
+	// Scale is the texture's longer side; a rotated rectangle reaches out to its half-diagonal.
+	const float width = static_cast<float>(m_texture->GetWidth());
+	const float height = static_cast<float>(m_texture->GetHeight());
+	return radius * std::sqrt(width * width + height * height) / std::max(1.0f, std::max(width, height));
 }
 
 int PreviewEffect::GetActiveParticleCount() const

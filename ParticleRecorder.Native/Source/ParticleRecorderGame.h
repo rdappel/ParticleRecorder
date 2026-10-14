@@ -11,9 +11,13 @@ class RecorderScreen;
 // Host -> game messages:
 //     set <Name> <value>    change a ParticleSettings value (see ParticleSettings.h)
 //     restart               restart the preview effect
+//     measure <options>     fit a recording to the effect (options: see ParseRecordingOptions)
+//     export <options>      record and write the sprite sheet + .anim (options end with path=)
 // Game -> host messages:
 //     ready                 content loaded, preview running
 //     stats <active>        active particle count (a few times per second)
+//     measured <frames> <frameW> <frameH> <sheetW> <sheetH>
+//     exported <frames> <frameW> <frameH> <sheetW> <sheetH>
 //     error <text>          a message could not be applied
 class ParticleRecorderGame : public Game
 {

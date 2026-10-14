@@ -47,6 +47,17 @@ void ParticleRecorderGame::OnHostMessage(const std::string& message)
 		return;
 	}
 
+	for (const bool exportFiles : { false, true })
+	{
+		const std::string prefix = exportFiles ? "export " : "measure ";
+		if (message.compare(0, prefix.size(), prefix) != 0) continue;
+
+		std::string reply, error;
+		if (m_recorderScreen->Record(exportFiles, message.substr(prefix.size()), reply, error)) SendHostMessage(reply);
+		else SendHostMessage("error " + error);
+		return;
+	}
+
 	const std::string setPrefix = "set ";
 	if (message.compare(0, setPrefix.size(), setPrefix) == 0)
 	{

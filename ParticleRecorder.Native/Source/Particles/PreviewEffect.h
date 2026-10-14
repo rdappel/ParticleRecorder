@@ -16,17 +16,30 @@ class PreviewEffect
 {
 public:
 
-	explicit PreviewEffect(const ParticleSettings& settings);
+	// The seed fixes the random sequence, so a recording can replay an effect exactly.
+	explicit PreviewEffect(const ParticleSettings& settings, unsigned int seed = std::random_device{}());
 
 	// Call after changing MaxParticles or EmissionRate (restarts the effect).
 	void Rebuild();
 
 	// nullptr draws circles. Keeps the live particles.
 	void SetTexture(std::shared_ptr<Texture> texture);
+	const std::shared_ptr<Texture>& GetTexture() const { return m_texture; }
 
 	void SetPosition(const Vector2& position);
 	void Update(const GameTime& gameTime);
 	void Draw(SpriteBatch& spriteBatch);
+
+	// Draws with viewOffset subtracted from every position (e.g. to place the effect in a recording frame).
+	void Draw(SpriteBatch& spriteBatch, const Vector2& viewOffset);
+
+	// Calls fn(const SimpleParticle&) for each live particle.
+	template<typename TFunction>
+	void ForEachParticle(TFunction&& fn) const { m_emitter->ForEachActive(std::forward<TFunction>(fn)); }
+
+	// Distance from a particle's centre to its farthest drawn pixel at the given Scale,
+	// whatever its rotation.
+	float GetParticleRadius(float scale) const;
 
 	int GetActiveParticleCount() const;
 

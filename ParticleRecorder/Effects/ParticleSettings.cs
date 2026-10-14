@@ -86,6 +86,8 @@ public sealed class ParticleSettings
     [Category("Appearance"), Description("Opacity when a particle dies (0-255).")]
     public int EndAlpha { get; set; } = 0;
 
+    public ParticleSettings Clone() => (ParticleSettings)MemberwiseClone();
+
     /// <summary>Every setting as a "set" message, e.g. to initialise the native preview.</summary>
     public IEnumerable<string> ToMessages() =>
         TypeDescriptor.GetProperties(this)
