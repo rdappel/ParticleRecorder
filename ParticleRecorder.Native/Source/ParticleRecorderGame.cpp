@@ -3,6 +3,7 @@
 #include "Screens/RecorderScreen.h"
 #include "Screens/AnimationPreviewScreen.h"
 
+
 ParticleRecorderGame::ParticleRecorderGame(const GameConfig& config)
 	: Game(config)
 {
@@ -182,14 +183,6 @@ void ParticleRecorderGame::ClosePreview()
 // Returns false if message isn't a path message.
 bool ParticleRecorderGame::HandlePathMessage(const std::string& message)
 {
-	if (StartsWith(message, "duration "))
-	{
-		const float seconds = static_cast<float>(std::atof(message.c_str() + 9));
-		if (seconds > 0.0f) m_recorderScreen->SetPathDuration(seconds);
-		else SendHostMessage("error invalid duration: " + message.substr(9));
-		return true;
-	}
-
 	if (message == "pen on" || message == "pen off")
 	{
 		m_recorderScreen->SetPenMode(message == "pen on");

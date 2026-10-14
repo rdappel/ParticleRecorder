@@ -20,10 +20,10 @@ Output: `ParticleRecorder/bin/<Configuration>/net10.0-windows/ParticleRecorder.e
 ## Rules
 
 ### C# owns the data
-Effect settings live in `ParticleRecorder/Effects/ParticleSettings.cs`, recording settings in `RecordingSettings.cs`. The native side only holds a mirror that it updates from `set` messages, and receives recording settings as `measure`/`record` options; it never decides values on its own. On `ready` the UI resends everything.
+All effect settings (including Timing and Sprite Sheet) live in `ParticleRecorder/Effects/ParticleSettings.cs` and show in the settings grid. The native side only holds a mirror that it updates from `set` messages (the live view uses the Timing settings), and receives the recording's options with `measure`/`record` (`ToRecordingOptions`); it never decides values on its own. On `ready` the UI resends everything.
 
 ### Effect files
-`*.keparticle` is JSON written by `ParticleRecorder/Effects/EffectDocument.cs` (`version`, `particles`, `recording`; colours `#RRGGBB`; texture relative to the file). New settings get defaults when missing, so old files keep loading. Bump `CurrentVersion` only for breaking changes, and keep reading older versions.
+`*.keparticle` is JSON written by `ParticleRecorder/Effects/EffectDocument.cs` (`version`, `particles`; colours `#RRGGBB`; texture relative to the file). Older files also have a `recording` section, which `LegacyRecording` maps into the particle settings. New settings get defaults when missing, so old files keep loading. Bump `CurrentVersion` only for breaking changes, and keep reading older versions.
 
 ### Recording must stay deterministic
 `ParticleRecorder.Native/Source/Recording/Recorder.cpp` simulates with a fixed `1/fps` step and the seed from the message, so a `measure` and the `record` that follows produce the same particles. Don't read real time, the live preview, or an unseeded random source while recording. `save` writes the recording held in memory (the frames the user previewed); it never re-simulates. The emitter's position comes only from `EmitterPositionAt`, which evaluates the effect's `EmitterPath` (`ParticleRecorder.Native/Source/Paths/`) over the recording's Duration.

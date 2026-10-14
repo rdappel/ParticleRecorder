@@ -9,9 +9,11 @@ using namespace KatanaEngine;
 
 // Live preview of the effect being edited, and recording it into a sprite sheet.
 //
-// The emitter rests at the effect origin (0.5, 0.6 of the view) and follows the effect's
-// path, once per path duration. The path is drawn over the effect; in pen mode its points
-// and handles are drawn too, and mouse input is forwarded to the host, which edits the path.
+// The live view plays the animation as it will be recorded, on repeat: each cycle starts
+// fresh (prewarmed if enabled), emits for Duration while the emitter follows its path, then
+// lets the particles die out if enabled. The emitter rests at the effect origin (0.5, 0.6 of
+// the view). The path is drawn over the effect; in pen mode its points and handles are drawn
+// too, and mouse input is forwarded to the host, which edits the path.
 class RecorderScreen : public Screen
 {
 public:
@@ -31,9 +33,6 @@ public:
 
 	int GetActiveParticleCount() const { return m_effect.GetActiveParticleCount(); }
 
-	// How long the emitter takes to cover its path (the recording's Duration).
-	void SetPathDuration(float seconds);
-
 	// Pen mode forwards mouse input to the host as "mouse ..." messages (see
 	// ParticleRecorderGame.h) and draws the path's points and handles.
 	void SetPenMode(bool enabled);
@@ -50,7 +49,13 @@ private:
 
 	// Where the effect origin is drawn in the view.
 	Vector2 GetOrigin() const;
-	double GetPathProgress() const { return m_pathTime / m_pathDuration; }
+	double GetPathProgress() const { return m_cycleTime / m_settings.Duration; }
+
+	// Starts the animation over: clears the particles and runs the prewarm.
+	void StartCycle();
+
+	// Moves the emitter along its path by gameTime's elapsed time, emitting as it goes.
+	void Advance(const GameTime& gameTime);
 
 	void DrawPath(SpriteBatch& spriteBatch) const;
 	void SendMouseMessage(const char* action, const Vector2& position, const char* button) const;
@@ -58,8 +63,8 @@ private:
 	ParticleSettings m_settings;	// declared before m_effect, which keeps a reference to it
 	PreviewEffect m_effect;
 
-	double m_pathTime = 0.0;		// seconds into the current trip along the path
-	double m_pathDuration = 1.0;
+	double m_cycleTime = 0.0;		// seconds into the animation (negative during prewarm)
+	bool m_isDyingOut = false;		// past Duration, waiting for the last particle to die
 	Vector2 m_emitterPosition;		// effect space
 
 	bool m_isPenMode = false;

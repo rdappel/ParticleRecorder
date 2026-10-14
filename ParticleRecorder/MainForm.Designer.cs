@@ -46,7 +46,6 @@ namespace ParticleRecorder
             loadTextureMenuItem = new ToolStripMenuItem();
             clearTextureMenuItem = new ToolStripMenuItem();
             editSeparator1 = new ToolStripSeparator();
-            recordingSettingsMenuItem = new ToolStripMenuItem();
             emitterPathMenuItem = new ToolStripMenuItem();
             viewMenu = new ToolStripMenuItem();
             restartPreviewMenuItem = new ToolStripMenuItem();
@@ -200,7 +199,7 @@ namespace ParticleRecorder
             //
             // editMenu
             //
-            editMenu.DropDownItems.AddRange(new ToolStripItem[] { loadTextureMenuItem, clearTextureMenuItem, editSeparator1, recordingSettingsMenuItem, emitterPathMenuItem });
+            editMenu.DropDownItems.AddRange(new ToolStripItem[] { loadTextureMenuItem, clearTextureMenuItem, editSeparator1, emitterPathMenuItem });
             editMenu.Name = "editMenu";
             editMenu.Size = new Size(39, 20);
             editMenu.Text = "&Edit";
@@ -223,13 +222,6 @@ namespace ParticleRecorder
             //
             editSeparator1.Name = "editSeparator1";
             editSeparator1.Size = new Size(187, 6);
-            //
-            // recordingSettingsMenuItem
-            //
-            recordingSettingsMenuItem.Name = "recordingSettingsMenuItem";
-            recordingSettingsMenuItem.Size = new Size(190, 22);
-            recordingSettingsMenuItem.Text = "&Recording Settings...";
-            recordingSettingsMenuItem.Click += recordingSettingsMenuItem_Click;
             //
             // emitterPathMenuItem
             //
@@ -611,7 +603,6 @@ namespace ParticleRecorder
         private ToolStripMenuItem loadTextureMenuItem;
         private ToolStripMenuItem clearTextureMenuItem;
         private ToolStripSeparator editSeparator1;
-        private ToolStripMenuItem recordingSettingsMenuItem;
         private ToolStripMenuItem emitterPathMenuItem;
         private ToolStripMenuItem viewMenu;
         private ToolStripMenuItem restartPreviewMenuItem;

@@ -16,11 +16,13 @@ struct RecordingOptions
 	int Padding = 2;			// transparent pixels around the effect's bounds
 	int Columns = 0;			// frames per sprite-sheet row (0 = choose automatically)
 	bool Loop = true;			// written to the .anim file
+	bool DieOut = false;		// after Duration, stop emitting and keep recording until every particle has died
 
+	// Frames recorded while emitting (Duration x Fps). Die-out frames come on top of these.
 	int GetFrameCount() const;
 };
 
-// Parses space-separated "key=value" pairs (seed, fps, duration, prewarm, padding, columns, loop).
+// Parses space-separated "key=value" pairs (seed, fps, duration, prewarm, padding, columns, loop, dieout).
 bool ParseRecordingOptions(const std::string& text, RecordingOptions& options, std::string& error);
 
 // Where the recorded effect sits and how the frames are packed.
@@ -28,7 +30,7 @@ struct RecordingLayout
 {
 	int FrameWidth = 0;
 	int FrameHeight = 0;
-	int FrameCount = 0;
+	int FrameCount = 0;			// including die-out frames
 	int Columns = 0;
 	int Rows = 0;
 	Vector2 Origin;				// simulation point drawn at each frame's top-left

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Drawing.Design;
 using System.Globalization;
+using System.Text.Json.Serialization;
 using DrawingColor = System.Drawing.Color;
 
 namespace ParticleRecorder.Effects;
@@ -16,9 +17,10 @@ public enum ParticleBlend
 }
 
 /// <summary>
-/// The effect being edited. C# owns this data; the native preview receives every change
-/// as a "set &lt;Name&gt; &lt;value&gt;" message. Must stay in sync with
-/// ParticleRecorder.Native/Source/Particles/ParticleSettings.h.
+/// The effect being edited, including how it is timed and recorded. C# owns this data; the
+/// native preview receives every change as a "set &lt;Name&gt; &lt;value&gt;" message (the
+/// Sprite Sheet settings only travel with "measure"/"record", see <see cref="ToRecordingOptions"/>).
+/// Must stay in sync with ParticleRecorder.Native/Source/Particles/ParticleSettings.h.
 /// </summary>
 public sealed class ParticleSettings
 {
@@ -86,6 +88,47 @@ public sealed class ParticleSettings
     [Category("Appearance"), Description("Opacity when a particle dies (0-255).")]
     public int EndAlpha { get; set; } = 0;
 
+    private float _duration = 1f;
+    private float _prewarmSeconds = 1f;
+    private int _fps = 30;
+    private int _padding = 2;
+    private int _framesPerRow;
+
+    [Category("Timing"), Description("Length of the animation in seconds: how long the effect emits, and how long the emitter takes to cover its path.")]
+    [RefreshProperties(RefreshProperties.All)]
+    public float Duration { get => _duration; set => _duration = Math.Clamp(value, 0.05f, 600f); }
+
+    [Category("Timing"), Description("Start \"full\": simulate the effect before the first frame. Turn off for effects that should start empty (bursts, explosions).")]
+    public bool Prewarm { get; set; } = true;
+
+    [Category("Timing"), Description("How long to simulate before the first frame, in seconds (when Prewarm is on).")]
+    public float PrewarmSeconds { get => _prewarmSeconds; set => _prewarmSeconds = Math.Clamp(value, 0f, 60f); }
+
+    [Category("Timing"), Description("After Duration, stop emitting and keep going until every particle has died, so the animation ends empty instead of cutting off. Adds frames.")]
+    [RefreshProperties(RefreshProperties.All)]
+    public bool DieOut { get; set; }
+
+    [Category("Timing"), Description("Written to the .anim file: whether a game loops the animation. The live view always repeats.")]
+    public bool Loop { get; set; } = true;
+
+    [Category("Timing"), Description("Frames the recording will have (die-out adds frames until the last particle has died).")]
+    [JsonIgnore]
+    public string Frames => FrameCount + (DieOut ? " + die-out" : string.Empty);
+
+    [Category("Sprite Sheet"), Description("Animation frames per second; the recording advances exactly 1/Fps per frame.")]
+    [RefreshProperties(RefreshProperties.All)]
+    public int Fps { get => _fps; set => _fps = Math.Clamp(value, 1, 240); }
+
+    [Category("Sprite Sheet"), Description("Transparent pixels around the effect in each frame. The frame size itself is fitted automatically to every particle.")]
+    public int Padding { get => _padding; set => _padding = Math.Clamp(value, 0, 256); }
+
+    [Category("Sprite Sheet"), Description("Frames per sprite-sheet row; 0 chooses the most square sheet.")]
+    public int FramesPerRow { get => _framesPerRow; set => _framesPerRow = Math.Clamp(value, 0, 10000); }
+
+    /// <summary>Frames recorded while emitting (rounded like the native side); die-out adds more.</summary>
+    [Browsable(false), JsonIgnore]
+    public int FrameCount => Math.Max(1, (int)Math.Round(Duration * Fps, MidpointRounding.AwayFromZero));
+
     /// <summary>The path the emitter follows (edited with the pen tool, not in the grid). Empty = it stays at the origin.</summary>
     [Browsable(false)]
     public EmitterPath Path { get; set; } = new();
@@ -115,8 +158,14 @@ public sealed class ParticleSettings
         nameof(Texture) => $"set Texture {Texture}",
         nameof(Blend) => $"set Blend {Blend}",
         nameof(Path) => $"set Path {Path.ToMessageValue()}",
+        nameof(Prewarm) => $"set Prewarm {(Prewarm ? 1 : 0)}",
+        nameof(DieOut) => $"set DieOut {(DieOut ? 1 : 0)}",
         _ => FormatFloatSetting(propertyName),
     };
+
+    /// <summary>The key=value options of a "measure"/"record" message (see Recorder.h in the native project).</summary>
+    public string ToRecordingOptions(uint seed) => string.Create(CultureInfo.InvariantCulture,
+        $"seed={seed} fps={Fps} duration={Duration} prewarm={(Prewarm ? PrewarmSeconds : 0f)} padding={Padding} columns={FramesPerRow} loop={(Loop ? 1 : 0)} dieout={(DieOut ? 1 : 0)}");
 
     private string? FormatFloatSetting(string propertyName)
     {

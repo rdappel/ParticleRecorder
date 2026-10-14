@@ -23,7 +23,11 @@ bool RecorderScreen::ApplySetting(const std::string& name, const std::string& va
 
 	if (name == "Texture") return LoadTexture(value, error);
 
-	if (RequiresEmitterRebuild(name)) m_effect.Rebuild();
+	if (RequiresEmitterRebuild(name) || AffectsTiming(name))
+	{
+		StartCycle();
+		return true;
+	}
 
 	// Continue from the matching place on the edited path, rather than streaking particles
 	// across from where the old path had the emitter.
@@ -49,17 +53,24 @@ bool RecorderScreen::LoadTexture(const std::string& path, std::string& error)
 
 void RecorderScreen::Restart()
 {
-	m_effect.Rebuild();
-	m_pathTime = 0.0;
-	m_emitterPosition = m_settings.Path.PositionAt(0.0);
+	StartCycle();
 }
 
-void RecorderScreen::SetPathDuration(float seconds)
+void RecorderScreen::StartCycle()
 {
-	if (seconds <= 0.0f) return;
+	constexpr double prewarmStep = 1.0 / 60.0;
 
-	m_pathTime = std::fmod(GetPathProgress(), 1.0) * seconds;
-	m_pathDuration = seconds;
+	m_effect.Rebuild();
+	m_isDyingOut = false;
+
+	// Same as a recording: the prewarm runs before time 0, with the emitter on its path.
+	const double prewarm = m_settings.PrewarmEnabled ? m_settings.PrewarmSeconds : 0.0;
+	const int steps = static_cast<int>(std::lround(prewarm / prewarmStep));
+	m_cycleTime = -steps * prewarmStep;
+	m_emitterPosition = m_settings.Path.PositionAt(GetPathProgress());
+	m_effect.SetPosition(GetOrigin() + m_emitterPosition);
+
+	for (int step = 0; step < steps; ++step) Advance(GameTime(m_cycleTime + prewarmStep, prewarmStep));
 }
 
 void RecorderScreen::SetPenMode(bool enabled)
@@ -118,20 +129,38 @@ void RecorderScreen::SendMouseMessage(const char* action, const Vector2& positio
 
 void RecorderScreen::Update(const GameTime& gameTime)
 {
-	const EmitterPath& path = m_settings.Path;
-	const double previousProgress = GetPathProgress();
-	m_pathTime += gameTime.ElapsedTime;
-	if (m_pathTime >= m_pathDuration) m_pathTime = std::fmod(m_pathTime, m_pathDuration);
+	const Vector2 position = GetOrigin() + m_emitterPosition;
 
-	// An open path starts over by jumping back to its start; don't spread particles across the jump.
-	const bool startedOver = GetPathProgress() < previousProgress;
-	const Vector2 from = startedOver && !path.IsClosed() ? path.PositionAt(0.0) : m_emitterPosition;
+	if (!m_isDyingOut && m_cycleTime >= m_settings.Duration)
+	{
+		if (!m_settings.DieOut) StartCycle();
+		else m_isDyingOut = true;
+	}
+
+	if (m_isDyingOut)
+	{
+		if (m_effect.GetActiveParticleCount() > 0)
+		{
+			m_effect.Update(gameTime, position, position, 0.0f);
+			return;
+		}
+
+		StartCycle();	// everything has died
+	}
+
+	Advance(gameTime);
+}
+
+void RecorderScreen::Advance(const GameTime& gameTime)
+{
+	const EmitterPath& path = m_settings.Path;
+	const Vector2 from = m_emitterPosition;
+	m_cycleTime += gameTime.ElapsedTime;
 	m_emitterPosition = path.PositionAt(GetPathProgress());
 
 	const Vector2 origin = GetOrigin();
 	m_effect.Update(gameTime, origin + from, origin + m_emitterPosition, path.RateAt(GetPathProgress()));
 }
-
 void RecorderScreen::Draw(SpriteBatch& spriteBatch)
 {
 	m_effect.Draw(spriteBatch);

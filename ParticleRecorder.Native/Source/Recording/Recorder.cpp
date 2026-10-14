@@ -34,11 +34,13 @@ namespace
 			for (int i = 0; i < prewarmSteps; ++i) Step();
 		}
 
-		void Step()
+		// emitting = false lets the live particles play out with no new ones (die-out).
+		void Step(bool emitting = true)
 		{
 			const Vector2 from = EmitterPositionAt(m_time);
 			m_time += m_step;
-			m_effect.Update(GameTime(m_time, m_step), from, EmitterPositionAt(m_time), m_path.RateAt(Progress(m_time)));
+			const float rate = emitting ? m_path.RateAt(Progress(m_time)) : 0.0f;
+			m_effect.Update(GameTime(m_time, m_step), from, EmitterPositionAt(m_time), rate);
 		}
 
 		PreviewEffect& GetEffect() { return m_effect; }
@@ -121,6 +123,7 @@ bool ParseRecordingOptions(const std::string& text, RecordingOptions& options, s
 		else if (key == "padding") parsed = static_cast<bool>(value >> options.Padding);
 		else if (key == "columns") parsed = static_cast<bool>(value >> options.Columns);
 		else if (key == "loop") parsed = static_cast<bool>(value >> options.Loop);
+		else if (key == "dieout") parsed = static_cast<bool>(value >> options.DieOut);
 
 		if (!parsed)
 		{
@@ -154,10 +157,8 @@ bool Recorder::Measure(const RecordingOptions& options, RecordingLayout& layout,
 	const PreviewEffect& effect = simulation.GetEffect();
 
 	float minX = FLT_MAX, minY = FLT_MAX, maxX = -FLT_MAX, maxY = -FLT_MAX;
-	const int frameCount = options.GetFrameCount();
-	for (int frame = 0; frame < frameCount; ++frame)
+	const auto addVisibleParticles = [&]()
 	{
-		simulation.Step();
 		effect.ForEachParticle([&](const SimpleParticle& particle)
 		{
 			if (particle.Scale <= 0.0f || particle.Color.Alpha <= 0.0f) return;	// not drawn
@@ -168,6 +169,28 @@ bool Recorder::Measure(const RecordingOptions& options, RecordingLayout& layout,
 			maxX = std::max(maxX, particle.Position.X + radius);
 			maxY = std::max(maxY, particle.Position.Y + radius);
 		});
+	};
+
+	int frameCount = options.GetFrameCount();
+	for (int frame = 0; frame < frameCount; ++frame)
+	{
+		simulation.Step();
+		addVisibleParticles();
+	}
+
+	// Die-out: keep recording, without emitting, until the last particle has died.
+	while (options.DieOut)
+	{
+		simulation.Step(false);
+		if (effect.GetActiveParticleCount() == 0) break;
+		if (frameCount >= MaxFrames)
+		{
+			error = "the particles are still alive after " + std::to_string(MaxFrames) + " frames; shorten their lifetime or turn off die-out";
+			return false;
+		}
+
+		addVisibleParticles();
+		++frameCount;
 	}
 
 	if (minX > maxX)
@@ -215,9 +238,10 @@ bool Recorder::Record(const RecordingOptions& options, Recording& recording, std
 
 	SpriteBatch spriteBatch;
 	Simulation simulation(m_settings, m_texture, options);
+	const int emittingFrames = options.GetFrameCount();
 	for (int index = 0; index < layout.FrameCount; ++index)
 	{
-		simulation.Step();
+		simulation.Step(index < emittingFrames);
 
 		frame->Begin();
 		frame->Clear(Color(0.0f, 0.0f, 0.0f, 0.0f));

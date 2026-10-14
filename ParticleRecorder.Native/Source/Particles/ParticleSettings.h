@@ -36,12 +36,21 @@ struct ParticleSettings
 	BlendState Blend = BlendState::ALPHA_BLEND;
 
 	EmitterPath Path;				// empty = the emitter stays at the origin
+
+	// Timing of one animation; the live view plays it on repeat, as recorded.
+	float Duration = 1.0f;			// seconds of emitting (the emitter covers its path once)
+	bool PrewarmEnabled = true;		// start "full": simulate before the first frame
+	float PrewarmSeconds = 1.0f;
+	bool DieOut = false;			// after Duration, stop emitting until every particle has died
 };
 
-// Applies one "Name value" pair. Colors are "r,g,b,a" with 0-255 components; Blend is
+// Applies one "Name value" pair. Booleans are 0 or 1. Colors are "r,g,b,a" with 0-255 components; Blend is
 // "Alpha" or "Additive"; Texture is a file path (may be empty); Path is described in EmitterPath::Parse.
 // Returns false for unknown names or malformed values (the settings are left unchanged).
 bool ApplySetting(ParticleSettings& settings, const std::string& name, const std::string& value);
 
 // True when changing this setting requires the emitter to be rebuilt.
 bool RequiresEmitterRebuild(const std::string& name);
+
+// True when this setting changes the animation's timing, so the live cycle should start over.
+bool AffectsTiming(const std::string& name);

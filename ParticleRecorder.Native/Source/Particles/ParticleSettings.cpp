@@ -25,6 +25,14 @@ namespace
 		return true;
 	}
 
+	bool TryParseBool(const std::string& text, bool& result)
+	{
+		if (text != "0" && text != "1") return false;
+
+		result = text == "1";
+		return true;
+	}
+
 	bool TryParseColor(const std::string& text, Color& result)
 	{
 		std::istringstream stream(text);
@@ -67,6 +75,15 @@ bool ApplySetting(ParticleSettings& settings, const std::string& name, const std
 	}
 
 	if (name == "Path") return settings.Path.Parse(value);
+	if (name == "Prewarm") return TryParseBool(value, settings.PrewarmEnabled);
+	if (name == "DieOut") return TryParseBool(value, settings.DieOut);
+	if (name == "Duration")
+	{
+		float seconds = 0.0f;
+		if (!TryParseFloat(value, seconds) || seconds <= 0.0f) return false;
+		settings.Duration = seconds;
+		return true;
+	}
 
 	if (name == "Blend")
 	{
@@ -93,6 +110,7 @@ bool ApplySetting(ParticleSettings& settings, const std::string& name, const std
 		{ "SpinMax", &ParticleSettings::SpinMax },
 		{ "StartSize", &ParticleSettings::StartSize },
 		{ "EndSize", &ParticleSettings::EndSize },
+		{ "PrewarmSeconds", &ParticleSettings::PrewarmSeconds },
 	};
 
 	for (const auto& setting : floatSettings)
@@ -106,4 +124,9 @@ bool ApplySetting(ParticleSettings& settings, const std::string& name, const std
 bool RequiresEmitterRebuild(const std::string& name)
 {
 	return name == "MaxParticles";
+}
+
+bool AffectsTiming(const std::string& name)
+{
+	return name == "Duration" || name == "Prewarm" || name == "PrewarmSeconds" || name == "DieOut";
 }

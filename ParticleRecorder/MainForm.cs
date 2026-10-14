@@ -14,7 +14,6 @@ public sealed partial class MainForm : Form
     private const int SafeTextureSize = 4096;
 
     private ParticleSettings _settings = new();
-    private RecordingSettings _recording = new();
     private string? _effectPath;
     private bool _isDirty;
 
@@ -44,7 +43,7 @@ public sealed partial class MainForm : Form
     {
         if (!ConfirmDiscardChanges()) return;
 
-        LoadEffect(new ParticleSettings(), new RecordingSettings(), path: null);
+        LoadEffect(new ParticleSettings(), path: null);
         statusLabel.Text = "New effect";
     }
 
@@ -56,8 +55,7 @@ public sealed partial class MainForm : Form
         var path = openEffectDialog.FileName;
         try
         {
-            var (particles, recording) = EffectDocument.Load(path);
-            LoadEffect(particles, recording, path);
+            LoadEffect(EffectDocument.Load(path), path);
             statusLabel.Text = $"Opened {Path.GetFileName(path)}";
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or JsonException or InvalidDataException)
@@ -87,16 +85,6 @@ public sealed partial class MainForm : Form
     private void loadTextureMenuItem_Click(object? sender, EventArgs e) => ChooseTexture();
 
     private void clearTextureMenuItem_Click(object? sender, EventArgs e) => SetTexture(string.Empty);
-
-    private void recordingSettingsMenuItem_Click(object? sender, EventArgs e)
-    {
-        using var dialog = new RecordingSettingsDialog { Settings = _recording.Clone() };
-        if (dialog.ShowDialog(this) != DialogResult.OK) return;
-
-        _recording = dialog.Settings;
-        SendPathDuration();
-        MarkDirty();
-    }
 
     private void emitterPathMenuItem_Click(object? sender, EventArgs e) => SetPathEditing(!IsEditingPath);
 
@@ -157,12 +145,8 @@ public sealed partial class MainForm : Form
     private void SendAllSettings()
     {
         foreach (var setting in _settings.ToMessages()) viewport.Post(setting);
-        SendPathDuration();
         viewport.Post("restart");
     }
-
-    private void SendPathDuration() =>
-        viewport.Post(string.Create(CultureInfo.InvariantCulture, $"duration {_recording.Duration}"));
 
     private void HandleGameMessage(string message)
     {
@@ -199,12 +183,11 @@ public sealed partial class MainForm : Form
 
     // ---- Effect files ----
 
-    private void LoadEffect(ParticleSettings particles, RecordingSettings recording, string? path)
+    private void LoadEffect(ParticleSettings particles, string? path)
     {
         ClosePreview();
 
         _settings = particles;
-        _recording = recording;
         _effectPath = path;
         _isDirty = false;
 
@@ -229,7 +212,7 @@ public sealed partial class MainForm : Form
 
         try
         {
-            EffectDocument.Save(path, _settings, _recording);
+            EffectDocument.Save(path, _settings);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
@@ -288,7 +271,7 @@ public sealed partial class MainForm : Form
         }
 
         SetPathEditing(false);
-        var options = _recording.ToOptions(seed: (uint)Random.Shared.Next(1, int.MaxValue));
+        var options = _settings.ToRecordingOptions(seed: (uint)Random.Shared.Next(1, int.MaxValue));
 
         SetBusy(true, "Measuring the animation...");
         try

@@ -12,7 +12,6 @@ class AnimationPreviewScreen;
 // Host -> game messages:
 //     set <Name> <value>    change a ParticleSettings value (see ParticleSettings.h)
 //     restart               restart the preview effect
-//     duration <seconds>    how long the live emitter takes to cover its path
 //     pen on | off          path editing: forward the mouse, draw points and handles
 //     pen select <index>    highlight a path point (-1 = none)
 //     measure <options>     fit a recording to the effect (options: see ParseRecordingOptions)
